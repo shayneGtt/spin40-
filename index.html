@@ -252,8 +252,9 @@ img{display:block;}
 .cancel-btn{font-size:11px;padding:5px 11px;border-radius:8px;background:var(--pink-l);color:var(--pink);border:1px solid rgba(240,80,138,.3);cursor:pointer;font-weight:700;font-family:inherit;flex-shrink:0;}
 
 /* ── admin tabs ── */
-.atabs{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+.atabs{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;cursor:grab;user-select:none;-webkit-overflow-scrolling:touch;}
 .atabs::-webkit-scrollbar{display:none;}
+.atabs.dragging{cursor:grabbing;}
 .atab{flex-shrink:0;padding:9px 17px;border-radius:20px;border:2px solid var(--border);background:var(--white);color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
 .atab.on{background:var(--teal);color:#fff;border-color:var(--teal);}
 .atab.pink-tab{border-color:rgba(240,80,138,.4);color:var(--pink);}
@@ -482,17 +483,35 @@ img{display:block;}
       <div id="co-pending"><div class="empty">今日無待確認課程</div></div>
     </div>
 
+    <!-- Real-time court status (coach view) -->
+    <div>
+      <div class="shdr"><div class="stitle">即時桌況</div></div>
+      <div id="courts-detail-coach"><div class="loading"><div class="spinner"></div>載入中</div></div>
+    </div>
+
     <!-- This week schedule -->
     <div>
-      <div class="shdr"><div class="stitle">本週我的課程</div><div class="sact" onclick="openAddClass()">＋ 新增排課</div></div>
+      <div class="shdr">
+        <div class="stitle">本週我的課程</div>
+        <div style="display:flex;gap:8px;">
+          <div class="sact" onclick="openCoachFixedModal()">📋 固定課表</div>
+          <div class="sact" onclick="openAddClass()">＋ 新增排課</div>
+        </div>
+      </div>
       <div class="card" id="co-schedule"><div class="loading"><div class="spinner"></div>載入中</div></div>
     </div>
 
-    <!-- My full schedule by day -->
+    <!-- My full schedule — week slider -->
     <div>
-      <div class="shdr"><div class="stitle">課表總覽</div></div>
-      <div><div class="dstrip" id="co-dstrip"></div></div>
-      <div class="card" style="margin-top:12px;" id="co-day-sched"><div class="empty">選擇日期查看課程</div></div>
+      <div class="shdr">
+        <div class="stitle">課表總覽</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="coachWeekShift(-1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">‹</button>
+          <span id="co-week-label" style="font-size:12px;font-weight:700;color:var(--gray);min-width:80px;text-align:center;"></span>
+          <button onclick="coachWeekShift(1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">›</button>
+        </div>
+      </div>
+      <div id="co-week-sched"><div class="loading"><div class="spinner"></div>載入中</div></div>
     </div>
   </div>
 </div>
@@ -507,9 +526,11 @@ img{display:block;}
     <div class="atabs">
       <button class="atab on" onclick="aTab('overview',this)">總覽</button>
       <button class="atab" onclick="aTab('members',this)">學員</button>
-      <button class="atab" onclick="aTab('schedule',this)">課程管理</button>
-      <button class="atab" onclick="aTab('coaches',this)">教練薪資</button>
-      <button class="atab" onclick="aTab('courts',this)">場地</button>
+      <button class="atab" onclick="aTab('stats',this)">數據</button>
+      <button class="atab" onclick="aTab('weekplan',this)">本週總表</button>
+      <button class="atab" onclick="aTab('schedule',this)">排課</button>
+      <button class="atab" onclick="aTab('history-sched',this)">歷史排課</button>
+      <button class="atab" onclick="aTab('coaches',this)">薪資</button>
       <button class="atab pink-tab" onclick="openRoleOvl()">⚙️ 帳號</button>
     </div>
 
@@ -520,8 +541,22 @@ img{display:block;}
         <div class="sbox"><div class="snum">6</div><div class="slbl">球桌數</div></div>
         <div class="sbox"><div class="snum" id="st-vip">—</div><div class="slbl">月費VIP</div></div>
       </div>
-      <div><div class="shdr"><div class="stitle">場地即時狀況</div></div><div class="cgrid" id="cgrid-a"></div></div>
-      <div><div class="shdr"><div class="stitle">今日課程</div></div><div class="card" id="a-today"><div class="loading"><div class="spinner"></div>載入中</div></div></div>
+      <!-- Courts detail moved here -->
+      <div>
+        <div class="shdr">
+          <div class="stitle">即時桌況</div>
+          <div class="sact" onclick="resetAllCourts()">🔄 全部重置</div>
+        </div>
+        <div id="courts-detail-admin"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      </div>
+      <div>
+        <div class="shdr"><div class="stitle">今日課程</div></div>
+        <div class="card" id="a-today"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      </div>
+      <div>
+        <div class="shdr"><div class="stitle">今日預約清單</div></div>
+        <div class="card" id="a-bookings"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      </div>
     </div>
 
     <!-- MEMBERS -->
@@ -535,9 +570,23 @@ img{display:block;}
       <button class="btn btn-teal" onclick="showToast('請使用註冊功能新增學員')">＋ 新增學員</button>
     </div>
 
-    <!-- SCHEDULE MANAGEMENT -->
+    <!-- STATS (Fix 3) -->
+    <div id="at-stats" class="asec">
+      <div class="shdr"><div class="stitle">學員帳號統計</div></div>
+      <div class="card" id="stats-member-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
+    </div>
+
+    <!-- WEEK PLAN (Fix 2) -->
+    <div id="at-weekplan" class="asec">
+      <div class="shdr">
+        <div class="stitle">本週教練排課總表</div>
+        <div class="sact" onclick="loadWeekPlan()">重新整理</div>
+      </div>
+      <div id="weekplan-content"><div class="loading"><div class="spinner"></div>載入中</div></div>
+    </div>
+
+    <!-- SCHEDULE MANAGEMENT (renamed from at-schedule) -->
     <div id="at-schedule" class="asec">
-      <!-- Fixed coach quick-set -->
       <div>
         <div class="shdr">
           <div class="stitle">固定教練設定</div>
@@ -545,24 +594,41 @@ img{display:block;}
         </div>
         <div class="card" id="fixed-coach-table"><div class="loading"><div class="spinner"></div>載入中</div></div>
       </div>
-
-      <!-- Date selector -->
       <div style="margin-top:4px;"><div class="dstrip" id="admin-sched-dstrip"></div></div>
-
-      <!-- Selected day header + add button -->
       <div class="shdr">
         <div class="stitle" id="admin-sched-day-title">今日課程</div>
         <button class="btn btn-teal btn-sm" onclick="openAddClass()">＋ 新增課程</button>
       </div>
-
-      <!-- Class list for selected day -->
       <div id="admin-sched-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
+    </div>
+
+    <!-- HISTORY SCHEDULE (Fix 7) -->
+    <div id="at-history-sched" class="asec">
+      <div class="shdr">
+        <div class="stitle">歷史排課紀錄</div>
+        <div class="sact" onclick="loadHistorySched()">搜尋</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div><div class="flabel" style="margin-bottom:4px;">開始日期</div><input class="finput" type="date" id="hs-from" style="padding:9px 10px;font-size:13px;"></div>
+        <div><div class="flabel" style="margin-bottom:4px;">結束日期</div><input class="finput" type="date" id="hs-to" style="padding:9px 10px;font-size:13px;"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input class="finput" id="hsearch-coach" placeholder="篩選教練" style="flex:1;padding:9px 12px;font-size:13px;">
+        <input class="finput" id="hsearch-name" placeholder="篩選課程" style="flex:1;padding:9px 12px;font-size:13px;">
+      </div>
+      <div id="history-sched-content"><div class="empty">設定日期區間後點「搜尋」</div></div>
     </div>
 
     <!-- COACHES / SALARY -->
     <div id="at-coaches" class="asec">
       <div class="shdr"><div class="stitle">教練時薪設定</div><div class="sact" onclick="saveRates()">儲存時薪</div></div>
       <div class="card" id="rate-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
+
+      <div class="shdr" style="margin-top:4px;">
+        <div class="stitle">額外加給</div>
+        <div class="sact" onclick="openBonusModal()">＋ 新增</div>
+      </div>
+      <div class="card" id="bonus-list"><div class="empty">尚無額外加給項目</div></div>
 
       <div class="shdr" style="margin-top:4px;"><div class="stitle">本月薪資結算</div><div class="sact" onclick="calcSalary()">重新計算</div></div>
       <div class="card" id="salary-list"><div class="empty">點擊「重新計算」產生報表</div></div>
@@ -571,15 +637,6 @@ img{display:block;}
       <div style="display:flex;flex-direction:column;gap:10px;" id="coach-cards"></div></div>
     </div>
 
-    <!-- COURTS -->
-    <div id="at-courts" class="asec">
-      <div class="cgrid" id="cgrid-admin"></div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button class="btn btn-gray btn-sm" style="flex:1;" onclick="resetAllCourts()">🔄 全部重置為可用</button>
-      </div>
-      <div class="stitle" style="margin-top:14px;margin-bottom:10px;">今日預約清單</div>
-      <div class="card" id="a-bookings"><div class="loading"><div class="spinner"></div>載入中</div></div>
-    </div>
   </div>
 </div>
 
@@ -789,9 +846,10 @@ img{display:block;}
       </label>
     </div>
 
-    <div class="brow">
-      <button class="btn btn-gray" onclick="closeModal('add-class-modal')">取消</button>
-      <button class="btn btn-teal" id="acm-confirm-btn" onclick="confirmAdminClass()">新增課程</button>
+    <div style="display:flex;gap:10px;margin-top:8px;">
+      <button class="btn btn-gray" style="flex:1;" onclick="closeModal('add-class-modal')">取消</button>
+      <button class="btn btn-pink" id="acm-delete-btn" style="display:none;flex:1;" onclick="deleteClassFromModal()">刪除</button>
+      <button class="btn btn-teal" id="acm-confirm-btn" style="flex:1;" onclick="confirmAdminClass()">新增課程</button>
     </div>
   </div>
 </div>
@@ -819,6 +877,115 @@ img{display:block;}
   </div>
 </div>
 
+<!-- Fixed Class Form Modal (Fix 3) -->
+<div class="mback" id="fixed-class-form-modal" onclick="closeModal('fixed-class-form-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="fcf-title">新增固定課</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;">
+      <div>
+        <div class="flabel">星期</div>
+        <select class="fsel" id="fcf-dow">
+          <option value="1">週一</option><option value="2">週二</option>
+          <option value="3">週三</option><option value="4">週四</option>
+          <option value="5">週五</option><option value="6">週六</option>
+          <option value="0">週日</option>
+        </select>
+      </div>
+      <div>
+        <div class="flabel">時間</div>
+        <select class="fsel" id="fcf-time">
+          <option>08:00</option><option>08:30</option><option>09:00</option><option>09:30</option>
+          <option>10:00</option><option>10:30</option><option>11:00</option><option>11:30</option>
+          <option>12:00</option><option>12:30</option><option>13:00</option><option>13:30</option>
+          <option>14:00</option><option>14:30</option><option>15:00</option><option>15:30</option>
+          <option>16:00</option><option>16:30</option><option>17:00</option><option>17:30</option>
+          <option>18:00</option><option>18:30</option><option>19:00</option><option>19:30</option>
+          <option>20:00</option><option>20:30</option><option>21:00</option><option>22:00</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:13px;"><div class="flabel">課程名稱</div><input class="finput" type="text" id="fcf-name" placeholder="例：學生競技團班"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;">
+      <div>
+        <div class="flabel">類型</div>
+        <select class="fsel" id="fcf-type">
+          <option value="group">團體班</option>
+          <option value="private">個人班</option>
+          <option value="duo">雙人班</option>
+        </select>
+      </div>
+      <div>
+        <div class="flabel">班別</div>
+        <select class="fsel" id="fcf-agegroup">
+          <option value="youth">學生班</option>
+          <option value="adult">成人班</option>
+          <option value="flex">彈性</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:13px;"><div class="flabel">人數上限</div><input class="finput" type="number" id="fcf-seats" value="5" min="1" max="20"></div>
+    <div class="errmsg" id="fcf-err"></div>
+    <div class="brow">
+      <button class="btn btn-gray" onclick="closeModal('fixed-class-form-modal')">取消</button>
+      <button class="btn btn-teal" onclick="confirmFixedClassForm()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Coach Fixed Schedule Modal (Fix 4) -->
+<div class="mback" id="coach-fixed-modal" onclick="closeModal('coach-fixed-modal')">
+  <div class="msheet" onclick="event.stopPropagation()" style="max-height:85dvh;overflow-y:auto;">
+    <div class="mhandle"></div>
+    <div class="mtitle">我的固定課表</div>
+    <div id="coach-fixed-list" style="margin-bottom:14px;"></div>
+    <button class="btn btn-teal" onclick="openCoachFixedForm()">＋ 新增我的固定課</button>
+    <div id="coach-fixed-form" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+      <div style="font-size:14px;font-weight:800;margin-bottom:12px;" id="cff-title">新增固定課</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <div class="flabel">星期</div>
+          <select class="fsel" id="cff-dow">
+            <option value="1">週一</option><option value="2">週二</option>
+            <option value="3">週三</option><option value="4">週四</option>
+            <option value="5">週五</option><option value="6">週六</option>
+            <option value="0">週日</option>
+          </select>
+        </div>
+        <div>
+          <div class="flabel">時間</div>
+          <select class="fsel" id="cff-time">
+            <option>08:00</option><option>09:00</option><option>10:00</option>
+            <option>13:30</option><option>14:00</option><option>15:00</option>
+            <option>15:30</option><option>16:30</option><option>17:00</option>
+            <option>18:00</option><option>19:00</option><option>20:00</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;"><div class="flabel">課程名稱</div><input class="finput" type="text" id="cff-name" placeholder="例：個人訓練課"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div>
+          <div class="flabel">類型</div>
+          <select class="fsel" id="cff-type">
+            <option value="private">個人班</option>
+            <option value="duo">雙人班</option>
+            <option value="group">團體班</option>
+          </select>
+        </div>
+        <div>
+          <div class="flabel">人數上限</div>
+          <input class="finput" type="number" id="cff-seats" value="1" min="1" max="10">
+        </div>
+      </div>
+      <div class="errmsg" id="cff-err"></div>
+      <div class="brow">
+        <button class="btn btn-gray" onclick="closeCoachFixedForm()">取消</button>
+        <button class="btn btn-teal" onclick="confirmCoachFixedForm()">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Cancel booking confirm -->
 <div class="mback" id="cancel-modal" onclick="closeModal('cancel-modal')">
   <div class="msheet" onclick="event.stopPropagation()">
@@ -831,6 +998,22 @@ img{display:block;}
     <div class="brow">
       <button class="btn btn-gray" onclick="closeModal('cancel-modal')">保留預約</button>
       <button class="btn btn-pink" onclick="confirmCancel()">確認取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bonus Modal (Fix 6) -->
+<div class="mback" id="bonus-modal" onclick="closeModal('bonus-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">新增額外加給</div>
+    <div style="margin-bottom:13px;"><div class="flabel">教練</div><select class="fsel" id="bonus-coach"></select></div>
+    <div style="margin-bottom:13px;"><div class="flabel">項目說明</div><input class="finput" type="text" id="bonus-label" placeholder="例：節日獎金、交通補貼"></div>
+    <div style="margin-bottom:13px;"><div class="flabel">金額（元）</div><input class="finput" type="number" id="bonus-amt" placeholder="0" min="0"></div>
+    <div class="errmsg" id="bonus-err"></div>
+    <div class="brow">
+      <button class="btn btn-gray" onclick="closeModal('bonus-modal')">取消</button>
+      <button class="btn btn-teal" onclick="confirmBonus()">新增</button>
     </div>
   </div>
 </div>
@@ -925,16 +1108,61 @@ window.addEventListener('fb-ready',()=>{
   DB=f.db;REF=f.ref;SET=f.set;GET=f.get;ONVAL=f.onValue;PUSH=f.push;UPD=f.update;REMOVE=f.remove;
   seedAdmin(); seedCourts(); seedSchedule();
   loadFixedCoachCache();
+  loadFixedScheduleCache();
+  // Auto-restore session if previously logged in
+  tryRestoreSession();
 });
 const fb = p => REF(DB,p);
 
 async function loadFixedCoachCache(){
   const s=await GET(fb('fixedCoaches'));
   if(s.exists()) fixedCoachCache=s.val();
-  // keep live updates
-  ONVAL(fb('fixedCoaches'),snap=>{
-    fixedCoachCache=snap.exists()?snap.val():{};
+  ONVAL(fb('fixedCoaches'),snap=>{ fixedCoachCache=snap.exists()?snap.val():{};});
+}
+
+async function tryRestoreSession(){
+  try{
+    const saved=localStorage.getItem('spin40_session');
+    if(!saved) return;
+    const {phone,pw}=JSON.parse(saved);
+    if(!phone||!pw) return;
+    const s=await GET(fb(`users/${phone}`));
+    if(!s.exists()) return;
+    const d=s.val();
+    if(d.pw!==pw) return; // password changed, force re-login
+    CU={phone,name:d.name,role:d.role,pts:d.pts||0,type:d.type||'standard',ageGroup:d.ageGroup||null};
+    enterApp();
+  }catch(e){ /* silent fail, stay on login */ }
+}
+
+async function loadFixedScheduleCache(){
+  const s=await GET(fb('fixedSchedule'));
+  if(s.exists()) fixedScheduleCache=s.val();
+  else await seedFixedSchedule();
+  ONVAL(fb('fixedSchedule'),snap=>{ fixedScheduleCache=snap.exists()?snap.val():{};});
+}
+
+async function seedFixedSchedule(){
+  const s=await GET(fb('fixedSchedule'));
+  if(s.exists()) return;
+  const entries={};
+  const add=(dow,time,name,type,ageGroup,seats)=>{
+    entries[`fs_${dow}_${time.replace(':','')}`]={dow,time,name,type,ageGroup,seats};
+  };
+  [1,3,4,5].forEach(d=>{
+    add(d,'13:30','學生競技團班','group','youth',5);
+    add(d,'15:00','學生競技團班','group','youth',5);
+    add(d,'16:30','學生競技團班','group','youth',5);
   });
+  [1,3,5].forEach(d=>add(d,'19:00','學生競技團班','group','youth',5));
+  add(2,'16:30','學生競技團班','group','youth',5);
+  [2,4].forEach(d=>add(d,'19:00','成人競技團班','group','adult',5));
+  add(6,'09:30','學生競技團班','group','youth',5);
+  add(6,'14:00','學生競技團班 A/B','group','youth',5);
+  add(6,'15:30','學生競技團班','group','youth',5);
+  add(6,'19:00','成人競技團班','group','adult',5);
+  await SET(fb('fixedSchedule'),entries);
+  fixedScheduleCache=entries;
 }
 
 // ═══════════════════════════════════════════
@@ -976,7 +1204,9 @@ let cancelKey_ = null;
 let cancelPts_ = 0;
 let cancelTbl_ = null;
 let schedFilter = 'all';
+let coachWeekOffset = 0; // weeks relative to current week for coach schedule view
 let fixedCoachCache = {}; // {dow_time: coachName}
+let fixedScheduleCache = {}; // Firebase fixedSchedule data
 
 // ═══════════════════════════════════════════
 //  AUTH
@@ -1001,6 +1231,8 @@ async function doLogin(){
     if(d.pw!==pass){err.textContent='密碼錯誤';return;}
     if(d.role!==currentRole){err.textContent=`身分不符（此帳號為 ${rlabel(d.role)}）`;return;}
     CU={phone,name:d.name,role:d.role,pts:d.pts||0,type:d.type||'standard',ageGroup:d.ageGroup||null};
+    // Persist session so page refresh doesn't kick to login
+    try{ localStorage.setItem('spin40_session', JSON.stringify({phone,pw:pass})); }catch(e){}
     document.getElementById('l-pass').value='';
     enterApp();
   }catch(e){err.textContent='連線錯誤';console.error(e);}
@@ -1062,6 +1294,7 @@ function goAdmin(){
 
 function doLogout(){
   CU=null; selAge_=null;
+  try{ localStorage.removeItem('spin40_session'); }catch(e){}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('bnav').classList.remove('on');
   document.getElementById('scr-login').classList.add('active');
@@ -1140,34 +1373,28 @@ async function loadHistory(){
     </div>`).join('');
 }
 
-// ── Generate fixed classes from weekly template ──
+// ── Generate fixed classes from Firebase fixedSchedule cache ──
 function getFixedClassesForDate(dateKey){
   const d=new Date(`${dateKey.slice(0,4)}-${dateKey.slice(4,6)}-${dateKey.slice(6,8)}`);
   const dow=d.getDay();
   const classes={};
   let idx=0;
-  // Look up coach from cache: key = "{dow}_{time_no_colon}"
-  const coach=(time)=>fixedCoachCache[`${dow}_${time.replace(':','')}`]||'待指派';
-  const mk=(time,name,type,ageGroup,seats)=>{
-    classes[`fixed_${idx++}`]={time,name,coach:coach(time),type,ageGroup,seats,enrolled:0};
-  };
-  if([1,3,4,5].includes(dow)){
-    mk('13:30','學生競技團班','group','youth',5);
-    mk('15:00','學生競技團班','group','youth',5);
-    mk('16:30','學生競技團班','group','youth',5);
-  }
-  if(dow===2) mk('16:30','學生競技團班','group','youth',5);
-  if([1,3,5].includes(dow)) mk('19:00','學生競技團班','group','youth',5);
-  if([2,4].includes(dow))   mk('19:00','成人競技團班','group','adult',5);
-  if(dow===6){
-    mk('09:30','學生競技團班','group','youth',5);
-    mk('14:00','學生競技團班 A/B','group','youth',5);
-    mk('15:30','學生競技團班','group','youth',5);
-    mk('19:00','成人競技團班','group','adult',5);
-  }
-  mk('彈性','個人班（需預約教練）','private','flex',1);
-  mk('彈性','雙人班（需預約教練）','duo','flex',2);
-  return Object.keys(classes).length>0 ? classes : null;
+  const coachFor=(time)=>fixedCoachCache[`${dow}_${time.replace(':','')}`]||'待指派';
+
+  // From Firebase fixedScheduleCache (editable)
+  Object.entries(fixedScheduleCache).forEach(([key,entry])=>{
+    if(entry.dow!==dow) return;
+    classes[`fixed_${idx++}`]={
+      time:entry.time, name:entry.name, coach:coachFor(entry.time),
+      type:entry.type||'group', ageGroup:entry.ageGroup||'youth',
+      seats:entry.seats||5, enrolled:0
+    };
+  });
+
+  // Always add flex placeholders
+  classes[`fixed_${idx++}`]={time:'彈性',name:'個人班（需預約教練）',coach:'待指派',type:'private',ageGroup:'flex',seats:1,enrolled:0};
+  classes[`fixed_${idx++}`]={time:'彈性',name:'雙人班（需預約教練）',coach:'待指派',type:'duo',ageGroup:'flex',seats:2,enrolled:0};
+  return Object.keys(classes).length>2?classes:null;
 }
 
 // ── Load live classes for selected date (with enroll) ──
@@ -1460,10 +1687,12 @@ async function confirmCancel(){
 // ═══════════════════════════════════════════
 async function setupCoach(){
   document.getElementById('co-name').textContent=`Hi，${CU.name} 👋`;
-  buildDstrip('co-dstrip');
+  coachWeekOffset=0;
   await loadCoachHours();
   await loadCoachSchedule();
   await loadPendingConfirmations();
+  loadCoachWeekSched();
+  loadCourtsDetail('courts-detail-coach', false);
 }
 
 async function loadCoachHours(){
@@ -1489,14 +1718,28 @@ async function loadCoachSchedule(){
   const days=[];
   for(let i=0;i<7;i++){const d=new Date(now);d.setDate(now.getDate()+i);days.push(dayKey(d));}
 
+  // Load coach's personal fixed schedule
+  const cfsSnap=await GET(fb(`coachFixedSchedule/${CU.phone}`));
+  const coachFixed=cfsSnap.exists()?cfsSnap.val():{};
+
   let allItems=[];
   for(const k of days){
-    // Merge Firebase + fixed template (same logic as student/admin views)
+    const d=new Date(`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`);
+    const dow=d.getDay();
+
+    // Global fixed + Firebase schedule
     const s=await GET(fb(`schedule/${k}`));
     const template=getFixedClassesForDate(k)||{};
     const merged={...template,...(s.exists()?s.val():{})};
     Object.entries(merged).forEach(([key,item])=>{
-      if(item.coach===CU.name) allItems.push({...item,dateKey:k,classKey:key});
+      if(item.coach===CU.name) allItems.push({...item,dateKey:k,classKey:key,source:'global'});
+    });
+
+    // Coach's personal fixed schedule for this day-of-week
+    Object.entries(coachFixed).filter(([,e])=>e.dow===dow).forEach(([key,e])=>{
+      // Only show if not already overridden by a real schedule entry
+      const alreadyIn=allItems.some(x=>x.dateKey===k&&x.time===e.time&&x.coach===CU.name);
+      if(!alreadyIn) allItems.push({...e,dateKey:k,classKey:`cf_${key}`,source:'personal',enrolled:0});
     });
   }
 
@@ -1506,7 +1749,7 @@ async function loadCoachSchedule(){
     <div class="si">
       <div class="si-time">${fmtDay(c.dateKey)}<br>${c.time}</div>
       <div class="si-info">
-        <div class="si-name">${c.name}</div>
+        <div class="si-name">${c.name}${c.source==='personal'?'<span style="font-size:9px;background:var(--amber-l);color:var(--amber);padding:2px 6px;border-radius:8px;margin-left:6px;">個人固定</span>':''}</div>
         <div class="si-sub">${c.enrolled||0}/${c.seats}人${c.table?` · 桌${c.table}`:''}</div>
       </div>
       <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':'個'}</div>
@@ -1517,10 +1760,9 @@ async function loadCoachSchedule(){
 // openAddClass is defined in admin section and works for both contexts
 
 async function confirmAddClass(){
-  // For coach context: quick add 1-on-1 using the shared modal
-  await confirmAdminClass();
-  // Also update coach hours
+  // Read date BEFORE confirmAdminClass closes the modal
   const dateRaw=document.getElementById('acm-date').value;
+  await confirmAdminClass();
   if(!dateRaw) return;
   const monthKey=`${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}`;
   const hs=await GET(fb(`coachHours/${CU.phone}`));
@@ -1535,13 +1777,12 @@ async function confirmAddClass(){
 //  ADMIN SETUP
 // ═══════════════════════════════════════════
 async function setupAdmin(){
-  loadCourts('a');
-  loadCourts('admin');
   loadAdminMembers();
   loadAdminBookings();
   loadTodayAdmin();
   loadCoachCards();
   loadRateList();
+  loadCourtsDetail('courts-detail-admin', true); // admin with toggle
 }
 
 async function loadAdminMembers(){
@@ -1703,6 +1944,12 @@ async function calcSalary(){
   const coaches=Object.entries(us.val()).filter(([,v])=>v.role==='coach');
   const now=new Date();
   const mk=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  // Load bonuses
+  const bonusSnap=await GET(fb(`coachBonus/${mk}`));
+  const bonusMap={};
+  if(bonusSnap.exists()) Object.values(bonusSnap.val()).forEach(b=>{
+    bonusMap[b.coach]=(bonusMap[b.coach]||0)+b.amt;
+  });
   let totalSalary=0;
   let html='';
   for(const [phone,c] of coaches){
@@ -1710,14 +1957,16 @@ async function calcSalary(){
     const mh=(hs.exists()?hs.val()[mk]:0)||0;
     const rs=await GET(fb(`coachRates/${phone}`));
     const rate=rs.exists()?(rs.val().hourlyRate||0):0;
-    const salary=mh*rate;
-    totalSalary+=salary;
+    const base=mh*rate;
+    const bonus=bonusMap[c.name]||0;
+    const total=base+bonus;
+    totalSalary+=total;
     html+=`<div class="salary-row">
       <div class="sr-left">
         <div class="sr-name">${c.name}</div>
-        <div class="sr-detail">${mh} hrs × $${rate}/hr</div>
+        <div class="sr-detail">${mh} hrs × $${rate}/hr 底薪 $${base.toLocaleString()}${bonus?` + 加給 $${bonus.toLocaleString()}`:''}</div>
       </div>
-      <div class="sr-amt">$${salary.toLocaleString()}</div>
+      <div class="sr-amt">$${total.toLocaleString()}</div>
     </div>`;
   }
   html+=`<div class="salary-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:14px;">
@@ -1977,79 +2226,399 @@ function aTab(id,el){
   document.querySelectorAll('.atab').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
   if(id==='members') loadAdminMembers();
-  if(id==='courts'){loadCourts('admin');loadAdminBookings();}
-  if(id==='coaches'){loadCoachCards();loadRateList();}
+  if(id==='coaches'){loadCoachCards();loadRateList();loadBonusList();}
   if(id==='schedule') initAdminSched();
+  if(id==='stats') loadAdminStats();
+  if(id==='weekplan') loadWeekPlan();
+  if(id==='history-sched'){
+    // Default range: this month
+    const now=new Date();
+    const y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0');
+    const fromEl=document.getElementById('hs-from');
+    const toEl=document.getElementById('hs-to');
+    if(fromEl&&!fromEl.value) fromEl.value=`${y}-${m}-01`;
+    if(toEl&&!toEl.value) toEl.value=`${y}-${m}-${String(new Date(y,now.getMonth()+1,0).getDate()).padStart(2,'0')}`;
+  }
+}
+
+// ═══════════════════════════════════════════
+//  FIX 3: ADMIN STATS
+// ═══════════════════════════════════════════
+async function loadAdminStats(){
+  const el=document.getElementById('stats-member-list');
+  el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
+  const [us,hs]=await Promise.all([GET(fb('users')),GET(fb('history'))]);
+  if(!us.exists()){el.innerHTML='<div class="empty">無學員資料</div>';return;}
+  const histData=hs.exists()?hs.val():{};
+  const students=Object.entries(us.val())
+    .filter(([,v])=>v.role==='student')
+    .map(([phone,v])=>{
+      const ph=histData[phone]?Object.values(histData[phone]):[];
+      const cards=ph.filter(h=>h.delta>0&&h.delta===11).length;
+      return {phone,name:v.name,pts:v.pts||0,type:v.type||'standard',ageGroup:v.ageGroup||'',cards,createdAt:v.createdAt||0};
+    })
+    .sort((a,b)=>a.name.localeCompare(b.name,'zh-TW'));
+
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:0;font-size:11px;font-weight:700;color:var(--gray);padding:8px 12px;letter-spacing:.5px;border-bottom:2px solid var(--border);">
+      <div style="min-width:28px;">#</div><div>姓名 / 手機</div><div style="text-align:center;min-width:48px;">點數</div><div style="text-align:right;min-width:52px;">已購卡</div>
+    </div>
+    ${students.map((s,i)=>`
+    <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:0;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);">
+      <div style="font-size:12px;color:var(--gray);min-width:28px;">${i+1}</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;">${s.name}
+          ${s.type==='vip'?'<span class="viptag">月費</span>':''}
+          ${s.ageGroup?`<span class="agetag">${s.ageGroup==='adult'?'成人':'青少年'}</span>`:''}
+        </div>
+        <div style="font-size:11px;color:var(--gray);">${s.phone}</div>
+      </div>
+      <div style="text-align:center;font-size:15px;font-weight:900;color:var(--teal);min-width:48px;">${s.type==='vip'?'月費':s.pts}</div>
+      <div style="text-align:right;font-size:14px;font-weight:700;color:var(--gray);min-width:52px;">${s.cards} 張</div>
+    </div>`).join('')}
+    <div style="padding:10px 12px;font-size:12px;color:var(--gray);border-top:1px solid var(--border);">共 ${students.length} 位學員</div>
+  `;
+}
+
+// ═══════════════════════════════════════════
+//  FIX 2: WEEK PLAN
+// ═══════════════════════════════════════════
+async function loadWeekPlan(){
+  const el=document.getElementById('weekplan-content');
+  el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
+  const now=new Date();
+  // Build this week Mon–Sun
+  const startOfWeek=new Date(now);
+  startOfWeek.setDate(now.getDate()-now.getDay()+1); // Mon
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);days.push(d);}
+
+  let html='';
+  for(const d of days){
+    const dk=dayKey(d);
+    const s=await GET(fb(`schedule/${dk}`));
+    const template=getFixedClassesForDate(dk)||{};
+    const merged={...template,...(s.exists()?s.val():{})};
+    const classes=Object.entries(merged).filter(([,c])=>c.name).sort(([,a],[,b])=>a.time.localeCompare(b.time));
+    if(!classes.length) continue;
+    html+=`<div style="margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:800;color:var(--gray);letter-spacing:1px;margin-bottom:8px;padding:6px 0;border-bottom:2px solid var(--border);">
+        週${'日一二三四五六'[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}
+        ${dk===dayKey(new Date())?'<span style="background:var(--teal);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;margin-left:6px;">今天</span>':''}
+      </div>
+      <div class="card" style="padding:10px;">
+        ${classes.map(([key,c])=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <div style="font-size:13px;font-weight:700;color:var(--gray);min-width:40px;">${c.time}</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:700;">${c.name}</div>
+              <div style="font-size:11px;color:${(!c.coach||c.coach==='待指派')?'var(--pink)':'var(--gray)'};">
+                教練：${c.coach||'待指派'}${c.assignedStudents?.length?' · '+c.assignedStudents.map(s=>s.name).join('、'):''}
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.confirmed?'✓已完成':c.type==='group'?'團':c.type==='private'?'個':'雙'}</div>
+              <button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
+                onclick="openEditClass('${dk}','${key}')">編輯</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  el.innerHTML=html||'<div class="empty">本週尚無排課</div>';
+}
+
+// ═══════════════════════════════════════════
+//  FIX 7: HISTORY SCHEDULE
+// ═══════════════════════════════════════════
+async function loadHistorySched(){
+  const el=document.getElementById('history-sched-content');
+  el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
+  const coachQ=(document.getElementById('hsearch-coach')?.value||'').toLowerCase();
+  const nameQ=(document.getElementById('hsearch-name')?.value||'').toLowerCase();
+  const fromRaw=document.getElementById('hs-from')?.value;
+  const toRaw=document.getElementById('hs-to')?.value;
+
+  if(!fromRaw||!toRaw){el.innerHTML='<div class="empty">請選擇日期區間後點「搜尋」</div>';return;}
+  const fromKey=fromRaw.replace(/-/g,'');
+  const toKey=toRaw.replace(/-/g,'');
+  if(fromKey>toKey){el.innerHTML='<div class="empty">開始日期不能晚於結束日期</div>';return;}
+
+  // Build list of dateKeys in range
+  const records=[];
+  const start=new Date(fromRaw); const end=new Date(toRaw);
+  const diff=Math.round((end-start)/(1000*60*60*24));
+  if(diff>180){el.innerHTML='<div class="empty">日期區間最多 180 天</div>';return;}
+
+  for(let i=0;i<=diff;i++){
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const dk=dayKey(d);
+    const s=await GET(fb(`schedule/${dk}`));
+    if(!s.exists()) continue;
+    Object.entries(s.val()).forEach(([key,c])=>{
+      if(!c.coach) return;
+      if(coachQ&&!c.coach.toLowerCase().includes(coachQ)) return;
+      if(nameQ&&!c.name.toLowerCase().includes(nameQ)) return;
+      records.push({...c,dateKey:dk,classKey:key});
+    });
+  }
+  records.sort((a,b)=>b.dateKey.localeCompare(a.dateKey)||a.time.localeCompare(b.time));
+
+  if(!records.length){el.innerHTML='<div class="empty">該區間無排課紀錄</div>';return;}
+  const confirmed=records.filter(r=>r.confirmed).length;
+  el.innerHTML=`<div style="display:flex;gap:12px;margin-bottom:10px;">
+    <span style="font-size:12px;color:var(--gray);">共 ${records.length} 筆</span>
+    <span style="font-size:12px;color:var(--teal);font-weight:700;">✓ 已完成 ${confirmed} 筆</span>
+    <span style="font-size:12px;color:var(--pink);font-weight:700;">⏳ 未確認 ${records.length-confirmed} 筆</span>
+  </div>`+
+    records.map(c=>`
+    <div class="card" style="margin-bottom:8px;padding:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div style="flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:700;color:var(--gray);">${c.dateKey.slice(0,4)}/${c.dateKey.slice(4,6)}/${c.dateKey.slice(6,8)} ${c.time}</span>
+            <span style="font-size:14px;font-weight:800;">${c.name}</span>
+          </div>
+          <div style="font-size:11px;color:var(--gray);margin-top:4px;">
+            教練：${c.coach||'—'}
+            ${c.assignedStudents?.length?' · 學員：'+c.assignedStudents.map(s=>s.name).join('、'):''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':c.type==='private'?'個':'雙'}</div>
+          <div style="font-size:10px;color:${c.confirmed?'var(--teal)':'var(--pink)'};">${c.confirmed?'✓ 已完成':'未確認'}</div>
+          <button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
+            onclick="openEditClass('${c.dateKey}','${c.classKey}')">編輯</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════
+//  FIX 5: COURTS DETAIL
+// ═══════════════════════════════════════════
+// elementId: which div to render into; isAdmin: show toggle button
+function loadCourtsDetail(elementId='courts-detail-admin', isAdmin=true){
+  const el=document.getElementById(elementId);
+  if(!el) return;
+  ONVAL(fb('courts'),async snap=>{
+    if(!snap.exists()){el.innerHTML='';return;}
+    const todaySched=await GET(fb(`schedule/${dayKey(new Date())}`));
+    const template=getFixedClassesForDate(dayKey(new Date()))||{};
+    const merged={...template,...(todaySched.exists()?todaySched.val():{})};
+    const tableMap={};
+    Object.values(merged).forEach(c=>{ if(c.table) tableMap[c.table]={...c}; });
+    const bookSnap=await GET(fb('bookings'));
+    const rentMap={};
+    if(bookSnap.exists()){
+      Object.values(bookSnap.val())
+        .filter(b=>dayKey(new Date(b.ts))===dayKey(new Date()))
+        .forEach(b=>{ if(b.table) rentMap[b.table]=b; });
+    }
+
+    const courts=snap.val();
+    el.innerHTML=Object.entries(courts).sort().map(([k,v])=>{
+      const num=parseInt(k.replace('table',''));
+      const avail=v.status==='available';
+      const cls=tableMap[num];
+      const rent=rentMap[num];
+      let info='';
+      if(cls&&!avail){
+        info=`<div style="font-size:12px;font-weight:700;margin-top:4px;">${cls.name}</div>
+          <div style="font-size:11px;color:var(--gray);">教練：${cls.coach||'—'}</div>
+          ${cls.assignedStudents?.length?`<div style="font-size:11px;color:var(--gray);">學員：${cls.assignedStudents.map(s=>s.name).join('、')}</div>`:''}`;
+      } else if(rent&&!avail){
+        info=`<div style="font-size:12px;font-weight:700;margin-top:4px;">場地租借</div>
+          <div style="font-size:11px;color:var(--gray);">${rent.name} · ${rent.slot||''}</div>`;
+      }
+      const toggleBtn=isAdmin
+        ?`<button class="cancel-btn" style="${avail?'background:var(--pink-l);color:var(--pink);border-color:rgba(240,80,138,.3);':'background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);'}"
+            onclick="adminToggleCourt('${k}','${v.status}')">${avail?'標為佔用':'標為空閒'}</button>`
+        :`<span style="font-size:11px;font-weight:700;color:${avail?'var(--teal)':'var(--pink)'};">${avail?'空閒':'使用中'}</span>`;
+      return `<div class="card" style="margin-bottom:8px;padding:14px;border-left:4px solid ${avail?'var(--teal)':'var(--pink)'};">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+          <div style="flex:1;">
+            <div style="font-size:18px;font-weight:900;margin-bottom:2px;">桌 ${num}</div>
+            ${info||`<div style="font-size:12px;color:var(--gray);">${avail?'空閒，可使用':'使用中'}</div>`}
+          </div>
+          ${toggleBtn}
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+// ═══════════════════════════════════════════
+//  FIX 6: BONUS
+// ═══════════════════════════════════════════
+async function openBonusModal(){
+  const sel=document.getElementById('bonus-coach');
+  sel.innerHTML='<option value="">— 選擇教練 —</option>';
+  const us=await GET(fb('users'));
+  if(us.exists()) Object.entries(us.val()).filter(([,v])=>v.role==='coach')
+    .forEach(([,v])=>{ const o=document.createElement('option');o.value=v.name;o.textContent=v.name;sel.appendChild(o); });
+  document.getElementById('bonus-label').value='';
+  document.getElementById('bonus-amt').value='';
+  document.getElementById('bonus-err').textContent='';
+  document.getElementById('bonus-modal').classList.add('on');
+}
+
+async function confirmBonus(){
+  const coach=document.getElementById('bonus-coach').value;
+  const label=document.getElementById('bonus-label').value.trim();
+  const amt=parseInt(document.getElementById('bonus-amt').value)||0;
+  const err=document.getElementById('bonus-err');
+  if(!coach){err.textContent='請選擇教練';return;}
+  if(!label){err.textContent='請填寫項目說明';return;}
+  if(amt<=0){err.textContent='金額必須大於 0';return;}
+  const mk=`${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}`;
+  try{
+    await PUSH(fb(`coachBonus/${mk}`),{coach,label,amt,ts:Date.now()});
+    closeModal('bonus-modal');
+    showToast(`✓ 已新增 ${coach} 加給 $${amt.toLocaleString()}`);
+    loadBonusList();
+  }catch(e){err.textContent='新增失敗';console.error(e);}
+}
+
+async function loadBonusList(){
+  const el=document.getElementById('bonus-list');
+  if(!el) return;
+  const mk=`${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}`;
+  const s=await GET(fb(`coachBonus/${mk}`));
+  if(!s.exists()){el.innerHTML='<div class="empty">尚無額外加給項目</div>';return;}
+  const items=Object.entries(s.val()).sort(([,a],[,b])=>b.ts-a.ts);
+  el.innerHTML=items.map(([key,b])=>`
+    <div class="salary-row">
+      <div class="sr-left">
+        <div class="sr-name">${b.coach}</div>
+        <div class="sr-detail">${b.label}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="sr-amt">$${b.amt.toLocaleString()}</div>
+        <button onclick="deleteBonus('${mk}','${key}')" style="background:none;border:none;color:var(--pink);cursor:pointer;font-size:16px;">×</button>
+      </div>
+    </div>`).join('');
+}
+
+async function deleteBonus(mk, key){
+  if(!confirm('確定刪除此加給項目？')) return;
+  await REMOVE(fb(`coachBonus/${mk}/${key}`));
+  showToast('✓ 已刪除');
+  loadBonusList();
 }
 
 // ═══════════════════════════════════════════
 //  ADMIN SCHEDULE MANAGEMENT
 // ═══════════════════════════════════════════
-let adminSchedDate = ''; // currently selected date key
+let adminSchedDate = '';
 
 async function initAdminSched(){
   buildAdminSchedDstrip();
-  loadFixedCoachTable();
+  loadEditableFixedSchedule();
   const today = dayKey(new Date());
   adminSchedDate = today;
   loadAdminSchedDay(today, '今日課程');
 }
 
-// Fixed time slots that need coaches
-const FIXED_SLOTS=[
-  {dow:1,time:'13:30',label:'週一 13:30 學生競技'},{dow:1,time:'15:00',label:'週一 15:00 學生競技'},
-  {dow:1,time:'16:30',label:'週一 16:30 學生競技'},{dow:1,time:'19:00',label:'週一 19:00 學生競技'},
-  {dow:2,time:'16:30',label:'週二 16:30 學生競技'},{dow:2,time:'19:00',label:'週二 19:00 成人競技'},
-  {dow:3,time:'13:30',label:'週三 13:30 學生競技'},{dow:3,time:'15:00',label:'週三 15:00 學生競技'},
-  {dow:3,time:'16:30',label:'週三 16:30 學生競技'},{dow:3,time:'19:00',label:'週三 19:00 學生競技'},
-  {dow:4,time:'13:30',label:'週四 13:30 學生競技'},{dow:4,time:'15:00',label:'週四 15:00 學生競技'},
-  {dow:4,time:'16:30',label:'週四 16:30 學生競技'},{dow:4,time:'19:00',label:'週四 19:00 成人競技'},
-  {dow:5,time:'13:30',label:'週五 13:30 學生競技'},{dow:5,time:'15:00',label:'週五 15:00 學生競技'},
-  {dow:5,time:'16:30',label:'週五 16:30 學生競技'},{dow:5,time:'19:00',label:'週五 19:00 學生競技'},
-  {dow:6,time:'09:30',label:'週六 09:30 學生競技'},{dow:6,time:'14:00',label:'週六 14:00 學生競技'},
-  {dow:6,time:'15:30',label:'週六 15:30 學生競技'},{dow:6,time:'19:00',label:'週六 19:00 成人競技'},
-];
+// ── Editable Fixed Schedule (Fix 3) ──
+const DOW_LABELS=['日','一','二','三','四','五','六'];
+let editingFixedKey=null; // null=add, string=edit key
 
-async function loadFixedCoachTable(){
+async function loadEditableFixedSchedule(){
   const el=document.getElementById('fixed-coach-table');
-
-  // Get coach list
   const us=await GET(fb('users'));
-  const coaches=us.exists()
-    ?Object.values(us.val()).filter(v=>v.role==='coach').map(v=>v.name)
-    :[];
-  const coachOpts=['<option value="">— 待指派 —</option>',
-    ...coaches.map(n=>`<option value="${n}">${n}</option>`)
-  ].join('');
+  const coaches=us.exists()?Object.values(us.val()).filter(v=>v.role==='coach').map(v=>v.name):[];
+  const coachOpts=['<option value="">— 待指派 —</option>',...coaches.map(n=>`<option value="${n}">${n}</option>`)].join('');
+
+  const entries=Object.entries(fixedScheduleCache).sort((a,b)=>{
+    const [,av]=a; const [,bv]=b;
+    return av.dow-bv.dow||(av.time<bv.time?-1:1);
+  });
 
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-      ${FIXED_SLOTS.map(s=>{
-        const k=`${s.dow}_${s.time.replace(':','')}`;
-        const cur=fixedCoachCache[k]||'';
-        return `<div style="display:flex;flex-direction:column;gap:4px;">
-          <div style="font-size:10px;font-weight:700;color:var(--gray);letter-spacing:.5px;">${s.label}</div>
-          <select class="fsel" id="fc-${k}" style="padding:8px 10px;font-size:13px;">
-            ${coachOpts.replace(`value="${cur}"`,`value="${cur}" selected`)}
-          </select>
+    <div style="margin-bottom:10px;">
+      <button class="btn btn-teal btn-sm" onclick="openFixedClassForm()">＋ 新增固定課</button>
+    </div>
+    <div id="fixed-sched-rows">
+      ${entries.map(([key,e])=>{
+        const ck=`${e.dow}_${e.time.replace(':','')}`;
+        const curCoach=fixedCoachCache[ck]||'';
+        return `<div style="display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);">
+          <div>
+            <div style="font-size:13px;font-weight:700;">週${DOW_LABELS[e.dow]} ${e.time} ${e.name}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+              <select class="fsel" id="fcc-${ck}" style="padding:5px 8px;font-size:12px;flex:1;">
+                ${coachOpts.replace(`value="${curCoach}"`,`value="${curCoach}" selected`)}
+              </select>
+            </div>
+          </div>
+          <button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);" onclick="openFixedClassForm('${key}')">編輯</button>
+          <button class="cancel-btn" onclick="deleteFixedClass('${key}')">刪除</button>
         </div>`;
       }).join('')}
+    </div>
+    <div style="margin-top:12px;">
+      <button class="btn btn-gray btn-sm" style="width:100%;" onclick="saveAllFixedCoaches()">儲存全部教練設定</button>
     </div>`;
 }
 
 async function saveAllFixedCoaches(){
   const updates={};
   let count=0;
-  for(const s of FIXED_SLOTS){
-    const k=`${s.dow}_${s.time.replace(':','')}`;
-    const sel=document.getElementById(`fc-${k}`);
-    if(sel&&sel.value){ updates[k]=sel.value; count++; }
-  }
-  if(!count){ showToast('請先選擇教練','err'); return; }
+  Object.entries(fixedScheduleCache).forEach(([,e])=>{
+    const k=`${e.dow}_${e.time.replace(':','')}`;
+    const sel=document.getElementById(`fcc-${k}`);
+    if(sel&&sel.value){updates[k]=sel.value;count++;}
+  });
+  if(!count){showToast('無可儲存的教練設定','err');return;}
   await UPD(fb('fixedCoaches'),updates);
   showToast(`✓ 已儲存 ${count} 個時段的固定教練`);
-  // reload current day to reflect changes
-  loadAdminSchedDay(adminSchedDate, document.getElementById('admin-sched-day-title').textContent);
+  loadAdminSchedDay(adminSchedDate,document.getElementById('admin-sched-day-title').textContent);
+}
+
+async function openFixedClassForm(key=null){
+  editingFixedKey=key;
+  const e=key?fixedScheduleCache[key]:null;
+  document.getElementById('fcf-dow').value=e?.dow??1;
+  document.getElementById('fcf-time').value=e?.time??'13:30';
+  document.getElementById('fcf-name').value=e?.name??'學生競技團班';
+  document.getElementById('fcf-type').value=e?.type??'group';
+  document.getElementById('fcf-agegroup').value=e?.ageGroup??'youth';
+  document.getElementById('fcf-seats').value=e?.seats??5;
+  document.getElementById('fcf-err').textContent='';
+  document.getElementById('fcf-title').textContent=key?'編輯固定課':'新增固定課';
+  document.getElementById('fixed-class-form-modal').classList.add('on');
+}
+
+async function confirmFixedClassForm(){
+  const dow=parseInt(document.getElementById('fcf-dow').value);
+  const time=document.getElementById('fcf-time').value;
+  const name=document.getElementById('fcf-name').value.trim();
+  const type=document.getElementById('fcf-type').value;
+  const ageGroup=document.getElementById('fcf-agegroup').value;
+  const seats=parseInt(document.getElementById('fcf-seats').value)||5;
+  const err=document.getElementById('fcf-err');
+  if(!name){err.textContent='請填寫課程名稱';return;}
+  try{
+    const obj={dow,time,name,type,ageGroup,seats};
+    if(editingFixedKey){
+      await SET(fb(`fixedSchedule/${editingFixedKey}`),obj);
+    } else {
+      const newKey=`fs_${dow}_${time.replace(':','')}_${Date.now()}`;
+      await SET(fb(`fixedSchedule/${newKey}`),obj);
+    }
+    closeModal('fixed-class-form-modal');
+    showToast('✓ 固定課程已儲存');
+    // cache will update via onValue listener
+    setTimeout(()=>loadEditableFixedSchedule(),500);
+  }catch(e){err.textContent='儲存失敗';console.error(e);}
+}
+
+async function deleteFixedClass(key){
+  if(!confirm('確定刪除此固定課程？不影響已排課紀錄。')) return;
+  await REMOVE(fb(`fixedSchedule/${key}`));
+  showToast('✓ 已刪除');
+  setTimeout(()=>loadEditableFixedSchedule(),500);
 }
 
 function buildAdminSchedDstrip(){
@@ -2149,6 +2718,7 @@ async function openAddClass(){
   document.getElementById('acm-confirm-btn').textContent='新增課程';
   document.getElementById('acm-fixed-opt').style.display='none';
   document.getElementById('acm-set-fixed').checked=false;
+  document.getElementById('acm-delete-btn').style.display='none';
   document.getElementById('acm-student-search').value='';
   renderAssignedChips();
   await populateCoachSelect('');
@@ -2183,6 +2753,7 @@ async function openEditClass(dateKey, classKey){
   document.getElementById('acm-err').textContent='';
   document.getElementById('acm-title').textContent='編輯課程';
   document.getElementById('acm-confirm-btn').textContent='儲存變更';
+  document.getElementById('acm-delete-btn').style.display='block';
   document.getElementById('acm-student-search').value='';
 
   const isFixed=classKey.startsWith('fixed_');
@@ -2256,6 +2827,16 @@ function renderAssignedChips(){
 
 async function populateCoachSelect(currentCoach){
   const sel=document.getElementById('acm-coach');
+  // Coach can only assign themselves
+  if(CU.role==='coach'){
+    sel.innerHTML=`<option value="${CU.name}" selected>${CU.name}（我）</option>`;
+    sel.disabled=true;
+    sel.style.opacity='0.7';
+    return;
+  }
+  // Admin: show all coaches + unassigned option
+  sel.disabled=false;
+  sel.style.opacity='1';
   sel.innerHTML='<option value="">— 待指派 —</option>';
   const us=await GET(fb('users'));
   if(!us.exists()) return;
@@ -2314,7 +2895,15 @@ async function confirmAdminClass(){
     closeModal('add-class-modal');
     const lbl=`週${'日一二三四五六'[new Date(`${dateKey.slice(0,4)}-${dateKey.slice(4,6)}-${dateKey.slice(6,8)}`).getDay()]} ${parseInt(dateKey.slice(6,8))}日`;
     adminSchedDate=dateKey;
-    loadAdminSchedDay(dateKey, lbl);
+    if(CU.role==='coach'){
+      loadCoachWeekSched();
+    } else {
+      // Always refresh schedule tab list for the saved date
+      loadAdminSchedDay(dateKey, lbl);
+      // Also refresh weekplan if it's been loaded (element exists and has content)
+      const wpEl=document.getElementById('weekplan-content');
+      if(wpEl&&!wpEl.querySelector('.empty')&&wpEl.innerHTML!=='') loadWeekPlan();
+    }
   }catch(e){err.textContent='儲存失敗';console.error(e);}
 }
 
@@ -2393,7 +2982,7 @@ async function confirmAttendance(){
       const newPts=Math.max(0,cur-s.ptsToDeduct);
       await UPD(fb(`users/${s.phone}`),{pts:newPts});
       await PUSH(fb(`history/${s.phone}`),{
-        label:`${classData.name} ${classData.time}（教練確認）`,
+        label:`${classData.name} ${classData.time}（教練：${classData.coach||'—'}）`,
         delta:-s.ptsToDeduct, ts:Date.now()
       });
     }
@@ -2422,13 +3011,42 @@ async function confirmAttendance(){
   }catch(e){showToast('確認失敗','err');console.error(e);}
 }
 
+async function deleteClassFromModal(){
+  if(adminClassMode!=='edit'||!adminClassEditKey||!adminClassEditDate){ showToast('無法刪除','err'); return; }
+  closeModal('add-class-modal');
+  await deleteClass(adminClassEditDate, adminClassEditKey);
+}
+
 async function deleteClass(dateKey, classKey){
   if(!confirm('確定要刪除這堂課嗎？')) return;
   try{
+    // Get class data before deleting
+    const cs=await GET(fb(`schedule/${dateKey}/${classKey}`));
+    if(cs.exists()){
+      const c=cs.val();
+      // If class was confirmed, reverse coach hours
+      if(c.confirmed && c.coach){
+        // Find coach phone
+        const us=await GET(fb('users'));
+        if(us.exists()){
+          const coachEntry=Object.entries(us.val()).find(([,v])=>v.role==='coach'&&v.name===c.coach);
+          if(coachEntry){
+            const coachPhone=coachEntry[0];
+            const hrs=c.type==='private'?1:1.5;
+            const mk=`${dateKey.slice(0,4)}${dateKey.slice(4,6)}`;
+            const hs=await GET(fb(`coachHours/${coachPhone}`));
+            const hd=hs.exists()?hs.val():{};
+            const newMonthH=Math.max(0,(hd[mk]||0)-hrs);
+            const newWeekH=Math.max(0,(hd.weekHours||0)-hrs);
+            await UPD(fb(`coachHours/${coachPhone}`),{[mk]:newMonthH,weekHours:newWeekH});
+          }
+        }
+      }
+    }
     await REMOVE(fb(`schedule/${dateKey}/${classKey}`));
     showToast('✓ 課程已刪除');
     loadAdminSchedDay(dateKey, document.getElementById('admin-sched-day-title').textContent);
-  }catch(e){showToast('刪除失敗','err');}
+  }catch(e){showToast('刪除失敗','err');console.error(e);}
 }
 
 // ═══════════════════════════════════════════
@@ -2479,29 +3097,87 @@ function buildDstrip(id){
   }
 }
 
-async function loadCoachDaySchedule(k){
-  const el=document.getElementById('co-day-sched');
+// ═══════════════════════════════════════════
+//  COACH WEEK SCHEDULE SLIDER
+// ═══════════════════════════════════════════
+function coachWeekShift(delta){
+  coachWeekOffset+=delta;
+  loadCoachWeekSched();
+}
+
+async function loadCoachWeekSched(){
+  const el=document.getElementById('co-week-sched');
+  if(!el) return;
   el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
 
-  // Merge Firebase + fixed template
-  const s=await GET(fb(`schedule/${k}`));
-  const template=getFixedClassesForDate(k)||{};
-  const merged={...template,...(s.exists()?s.val():{})};
+  // Calculate week start (Mon) for the offset
+  const now=new Date();
+  const monday=new Date(now);
+  monday.setDate(now.getDate()-now.getDay()+1+coachWeekOffset*7);
 
-  const items=Object.entries(merged)
-    .filter(([,c])=>c.coach===CU.name)
-    .sort(([,a],[,b])=>a.time.localeCompare(b.time));
+  // Update label
+  const sunday=new Date(monday); sunday.setDate(monday.getDate()+6);
+  const lbl=`${monday.getMonth()+1}/${monday.getDate()} – ${sunday.getMonth()+1}/${sunday.getDate()}`;
+  const weekLabel=document.getElementById('co-week-label');
+  if(weekLabel) weekLabel.textContent=coachWeekOffset===0?'本週':coachWeekOffset===-1?'上週':coachWeekOffset===1?'下週':lbl;
 
-  if(!items.length){el.innerHTML='<div class="empty">當日無您的課程</div>';return;}
-  el.innerHTML=items.map(([,c])=>`
-    <div class="si">
-      <div class="si-time">${c.time}</div>
-      <div class="si-info">
-        <div class="si-name">${c.name}</div>
-        <div class="si-sub">${c.enrolled||0}/${c.seats}人${c.table?` · 桌${c.table}`:''}</div>
+  // Load coach's personal fixed schedule
+  const cfsSnap=await GET(fb(`coachFixedSchedule/${CU.phone}`));
+  const coachFixed=cfsSnap.exists()?cfsSnap.val():{};
+
+  let html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(monday); d.setDate(monday.getDate()+i);
+    const dk=dayKey(d);
+    const dow=d.getDay();
+    const isToday=dk===dayKey(new Date());
+
+    // Merge all sources
+    const s=await GET(fb(`schedule/${dk}`));
+    const template=getFixedClassesForDate(dk)||{};
+    const merged={...template,...(s.exists()?s.val():{})};
+
+    // Filter to this coach
+    let items=Object.entries(merged).filter(([,c])=>c.coach===CU.name);
+
+    // Add personal fixed if not already present
+    Object.entries(coachFixed).filter(([,e])=>e.dow===dow).forEach(([key,e])=>{
+      const dup=items.some(([,x])=>x.time===e.time);
+      if(!dup) items.push([`cf_${key}`,{...e,source:'personal',enrolled:0}]);
+    });
+
+    items.sort(([,a],[,b])=>a.time.localeCompare(b.time));
+    if(!items.length) continue;
+
+    html+=`<div style="margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:800;color:${isToday?'var(--teal)':'var(--gray)'};letter-spacing:1px;margin-bottom:6px;padding:5px 0;border-bottom:2px solid ${isToday?'var(--teal)':'var(--border)'};">
+        週${'日一二三四五六'[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}
+        ${isToday?'<span style="background:var(--teal);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;margin-left:6px;">今天</span>':''}
       </div>
-      <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':'個'}</div>
-    </div>`).join('');
+      <div class="card" style="padding:10px;">
+        ${items.map(([key,c])=>{
+          const isFixed=key.startsWith('fixed_');
+          const isPersonal=key.startsWith('cf_');
+          const editBtn=!isPersonal
+            ?`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
+                onclick="openEditClass('${dk}','${key}')">編輯</button>`
+            :'';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+            <div style="font-size:12px;font-weight:700;color:var(--gray);min-width:36px;">${c.time}</div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:700;">${c.name}${isPersonal?'<span style="font-size:9px;background:var(--amber-l);color:var(--amber);padding:2px 6px;border-radius:8px;margin-left:5px;">個人固定</span>':''}</div>
+              <div style="font-size:11px;color:var(--gray);">${c.enrolled||0}/${c.seats}人${c.table?` · 桌${c.table}`:''}${c.confirmed?' · <span style="color:var(--teal);">✓已完成</span>':''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':'個'}</div>
+              ${editBtn}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  el.innerHTML=html||`<div class="empty">本週無您的課程</div>`;
 }
 
 function closeModal(id){document.getElementById(id).classList.remove('on');}
@@ -2515,6 +3191,111 @@ function showToast(msg,type=''){
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='Enter'){const l=document.getElementById('scr-login');if(l.classList.contains('active'))doLogin();}});
+
+// ── Drag-scroll for admin tabs (Fix 1) ──
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('.atabs').forEach(el=>{
+    let isDown=false,startX,scrollLeft;
+    el.addEventListener('mousedown',e=>{isDown=true;el.classList.add('dragging');startX=e.pageX-el.offsetLeft;scrollLeft=el.scrollLeft;});
+    el.addEventListener('mouseleave',()=>{isDown=false;el.classList.remove('dragging');});
+    el.addEventListener('mouseup',()=>{isDown=false;el.classList.remove('dragging');});
+    el.addEventListener('mousemove',e=>{if(!isDown)return;e.preventDefault();const x=e.pageX-el.offsetLeft;el.scrollLeft=scrollLeft-(x-startX);});
+  });
+});
+
+// ═══════════════════════════════════════════
+//  FIX 4: COACH FIXED SCHEDULE
+// ═══════════════════════════════════════════
+let editingCoachFixedKey=null;
+
+async function openCoachFixedModal(){
+  await loadCoachFixedList();
+  document.getElementById('coach-fixed-form').style.display='none';
+  document.getElementById('coach-fixed-modal').classList.add('on');
+}
+
+async function loadCoachFixedList(){
+  const el=document.getElementById('coach-fixed-list');
+  const s=await GET(fb(`coachFixedSchedule/${CU.phone}`));
+  if(!s.exists()||!Object.keys(s.val()).length){
+    el.innerHTML='<div class="empty">尚無個人固定課表</div>';return;
+  }
+  const entries=Object.entries(s.val()).sort(([,a],[,b])=>a.dow-b.dow||(a.time<b.time?-1:1));
+  el.innerHTML=entries.map(([key,e])=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:13px;font-weight:700;">週${DOW_LABELS[e.dow]} ${e.time} · ${e.name}</div>
+        <div style="font-size:11px;color:var(--gray);">人數上限 ${e.seats||1} · ${e.type==='private'?'個人班':e.type==='duo'?'雙人班':'團體班'}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);" onclick="editCoachFixed('${key}')">編輯</button>
+        <button class="cancel-btn" onclick="deleteCoachFixed('${key}')">刪除</button>
+      </div>
+    </div>`).join('');
+}
+
+function openCoachFixedForm(key=null){
+  editingCoachFixedKey=key;
+  const e=key?(document.getElementById('coach-fixed-list').dataset||null):null;
+  document.getElementById('cff-name').value='';
+  document.getElementById('cff-dow').value=1;
+  document.getElementById('cff-time').value='13:30';
+  document.getElementById('cff-type').value='private';
+  document.getElementById('cff-seats').value=1;
+  document.getElementById('cff-err').textContent='';
+  document.getElementById('cff-title').textContent='新增固定課';
+  document.getElementById('coach-fixed-form').style.display='block';
+}
+
+async function editCoachFixed(key){
+  editingCoachFixedKey=key;
+  const s=await GET(fb(`coachFixedSchedule/${CU.phone}/${key}`));
+  if(!s.exists()) return;
+  const e=s.val();
+  document.getElementById('cff-dow').value=e.dow;
+  document.getElementById('cff-time').value=e.time;
+  document.getElementById('cff-name').value=e.name||'';
+  document.getElementById('cff-type').value=e.type||'private';
+  document.getElementById('cff-seats').value=e.seats||1;
+  document.getElementById('cff-err').textContent='';
+  document.getElementById('cff-title').textContent='編輯固定課';
+  document.getElementById('coach-fixed-form').style.display='block';
+}
+
+async function deleteCoachFixed(key){
+  if(!confirm('確定刪除此固定課？')) return;
+  await REMOVE(fb(`coachFixedSchedule/${CU.phone}/${key}`));
+  showToast('✓ 已刪除');
+  loadCoachFixedList();
+}
+
+function closeCoachFixedForm(){
+  document.getElementById('coach-fixed-form').style.display='none';
+  editingCoachFixedKey=null;
+}
+
+async function confirmCoachFixedForm(){
+  const dow=parseInt(document.getElementById('cff-dow').value);
+  const time=document.getElementById('cff-time').value;
+  const name=document.getElementById('cff-name').value.trim();
+  const type=document.getElementById('cff-type').value;
+  const seats=parseInt(document.getElementById('cff-seats').value)||1;
+  const err=document.getElementById('cff-err');
+  if(!name){err.textContent='請填寫課程名稱';return;}
+  const obj={dow,time,name,type,ageGroup:'flex',seats,coach:CU.name};
+  try{
+    if(editingCoachFixedKey){
+      await SET(fb(`coachFixedSchedule/${CU.phone}/${editingCoachFixedKey}`),obj);
+    } else {
+      await PUSH(fb(`coachFixedSchedule/${CU.phone}`),obj);
+    }
+    closeCoachFixedForm();
+    showToast('✓ 固定課已儲存');
+    loadCoachFixedList();
+    // Also reload weekly schedule to reflect changes
+    loadCoachSchedule();
+  }catch(e){err.textContent='儲存失敗';console.error(e);}
+}
 </script>
 </body>
 </html>
