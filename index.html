@@ -2,772 +2,732 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>Spin 40+ 桌球概念館</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=DM+Sans:ital,wght@0,400;0,600;0,700;0,900;1,400&display=swap" rel="stylesheet">
 
-<!-- Firebase -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, set, get, onValue, push, update, serverTimestamp }
+  import { getDatabase, ref, set, get, onValue, push, update, remove }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyD2UAYUcp_flhFukih510J7jJ6stm_UMZQ",
-    authDomain: "gym-tt-default-rtdb.firebaseapp.com",
-    databaseURL: "https://gym-tt-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "gym-tt-default-rtdb",
+  const cfg = {
+    apiKey:"AIzaSyD2UAYUcp_flhFukih510J7jJ6stm_UMZQ",
+    databaseURL:"https://gym-tt-default-rtdb.asia-southeast1.firebasedatabase.app",
   };
-  const app = initializeApp(firebaseConfig);
+  const app = initializeApp(cfg);
   const db  = getDatabase(app);
-
-  // ── expose to window so inline scripts can use ──
-  window._fb = { db, ref, set, get, onValue, push, update, serverTimestamp };
+  window._fb = { db, ref, set, get, onValue, push, update, remove };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 
 <style>
-:root {
-  --teal:   #2DBFAA;
-  --teal2:  #1fa898;
-  --teal-l: #e8f8f6;
-  --pink:   #F0508A;
-  --pink-l: #fde8f1;
-  --bg:     #f2f4f3;
-  --white:  #ffffff;
-  --dark:   #1a2a28;
-  --gray:   #8a9e9b;
-  --border: #dde8e6;
-  --radius: 16px;
-  --tab-h:  64px;
-  --shadow: 0 2px 16px rgba(45,191,170,0.10);
+:root{
+  --teal:#2DBFAA; --teal2:#1a9e8c; --teal-l:#e8f8f6;
+  --pink:#F0508A; --pink-l:#fde8f1;
+  --amber:#f5a623; --amber-l:#fef6e8;
+  --bg:#f0f4f3; --white:#fff; --dark:#1a2a28;
+  --gray:#8a9e9b; --border:#dde8e6;
+  --r:16px; --tab:64px;
+  --shadow:0 2px 14px rgba(45,191,170,.10);
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{
-  background:var(--bg);
-  color:var(--dark);
-  font-family:'Noto Sans TC',sans-serif;
-  min-height:100dvh;
-  max-width:430px;
-  margin:0 auto;
-  position:relative;
-  overflow-x:hidden;
-}
+body{background:var(--bg);color:var(--dark);font-family:'Noto Sans TC',sans-serif;max-width:430px;margin:0 auto;overflow-x:hidden;}
+img{display:block;}
 
-/* ── SCREENS ── */
-.screen{display:none;flex-direction:column;min-height:100dvh;padding-bottom:var(--tab-h);}
+/* ── screens ── */
+.screen{display:none;flex-direction:column;min-height:100dvh;padding-bottom:var(--tab);}
 .screen.active{display:flex;}
-#login-screen{padding-bottom:0;min-height:100dvh;}
+#scr-login,#scr-onboard{padding-bottom:0;min-height:100dvh;}
 
-/* ── LOGIN ── */
-.login-header{
-  background: linear-gradient(160deg, var(--teal) 0%, #1a9e8c 100%);
-  padding: 60px 32px 48px;
-  position:relative; overflow:hidden;
-  border-radius: 0 0 36px 36px;
-}
-.login-header::before{
-  content:'';
-  position:absolute; inset:0;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='160' cy='40' r='80' fill='rgba(255,255,255,0.06)'/%3E%3Ccircle cx='40' cy='160' r='60' fill='rgba(255,255,255,0.04)'/%3E%3C/svg%3E") no-repeat center/cover;
-}
-.login-logo{
-  position:relative;
-  display:flex; align-items:center; gap:14px; margin-bottom:24px;
-}
-.logo-ring{
-  width:52px; height:52px;
-  border:3.5px solid rgba(255,255,255,0.9);
-  border-radius:50%;
-  position:relative;
-  flex-shrink:0;
-}
-.logo-ring::before,.logo-ring::after{
-  content:'';position:absolute;
-  border-radius:50%;
-  border:3.5px solid rgba(255,255,255,0.55);
-}
-.logo-ring::before{inset:-6px;border-style:dashed;}
-.logo-ring::after{inset:6px;}
-.logo-text .brand{font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;font-family:'DM Sans',sans-serif;}
-.logo-text .sub{font-size:12px;color:rgba(255,255,255,0.75);letter-spacing:3px;margin-top:2px;}
-.login-tagline{position:relative;color:#fff;}
-.login-tagline h1{font-size:30px;font-weight:900;line-height:1.2;}
-.login-tagline p{font-size:13px;color:rgba(255,255,255,0.75);margin-top:6px;}
+/* ── login header ── */
+.lhdr{background:linear-gradient(150deg,var(--teal) 0%,var(--teal2) 100%);padding:56px 28px 44px;border-radius:0 0 32px 32px;position:relative;overflow:hidden;}
+.lhdr::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(255,255,255,.08),transparent 60%);}
+.logo-row{display:flex;align-items:center;gap:14px;margin-bottom:22px;position:relative;}
+.logo-ring{width:50px;height:50px;border-radius:50%;border:3px solid rgba(255,255,255,.9);position:relative;flex-shrink:0;}
+.logo-ring::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:2.5px dashed rgba(255,255,255,.45);}
+.logo-ring::after{content:'';position:absolute;inset:8px;border-radius:50%;border:2px solid rgba(255,255,255,.5);}
+.brand{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:900;color:#fff;}
+.brand-sub{font-size:11px;color:rgba(255,255,255,.7);letter-spacing:3px;margin-top:2px;}
+.lhdr h1{font-size:28px;font-weight:900;color:#fff;position:relative;}
+.lhdr p{font-size:12px;color:rgba(255,255,255,.7);margin-top:5px;position:relative;}
 
-.login-body{padding:28px 24px 40px;display:flex;flex-direction:column;gap:14px;}
+/* ── form ── */
+.fbody{padding:24px;display:flex;flex-direction:column;gap:14px;}
+.flabel{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--gray);text-transform:uppercase;margin-bottom:5px;}
+.finput{width:100%;background:var(--white);border:2px solid var(--border);border-radius:12px;padding:13px 15px;font-size:16px;font-family:inherit;color:var(--dark);outline:none;transition:border-color .2s;}
+.finput:focus{border-color:var(--teal);}
+.fsel{width:100%;background:var(--white);border:2px solid var(--border);border-radius:12px;padding:13px 15px;font-size:15px;font-family:inherit;color:var(--dark);outline:none;}
+.fsel:focus{border-color:var(--teal);}
+.role-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.rtab{background:var(--white);border:2px solid var(--border);border-radius:12px;padding:10px 4px;color:var(--gray);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;text-align:center;transition:all .2s;}
+.rtab.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+.errmsg{color:var(--pink);font-size:12px;text-align:center;min-height:16px;}
 
-.role-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:2px;}
-.role-tab{
-  background:var(--white); border:2px solid var(--border);
-  border-radius:12px; padding:10px 4px;
-  color:var(--gray); font-size:13px; font-weight:600;
-  font-family:inherit; cursor:pointer; text-align:center;
-  transition:all .2s;
-}
-.role-tab.active{background:var(--teal);color:#fff;border-color:var(--teal);}
-
-.field-wrap{display:flex;flex-direction:column;gap:6px;}
-.field-label{font-size:11px;font-weight:600;color:var(--gray);letter-spacing:1.5px;text-transform:uppercase;}
-.field-input{
-  background:var(--white); border:2px solid var(--border);
-  border-radius:12px; padding:14px 16px;
-  color:var(--dark); font-size:16px; font-family:inherit;
-  outline:none; transition:border-color .2s; width:100%;
-}
-.field-input:focus{border-color:var(--teal);}
-
-.btn-primary{
-  background:var(--teal); color:#fff; font-weight:700;
-  font-size:16px; padding:16px; border:none;
-  border-radius:var(--radius); cursor:pointer; font-family:inherit;
-  transition:transform .1s,opacity .1s; letter-spacing:.3px;
-  box-shadow:0 4px 20px rgba(45,191,170,0.35);
-}
-.btn-primary:active{transform:scale(0.98);opacity:.9;}
-.btn-primary.pink{background:var(--pink);box-shadow:0 4px 20px rgba(240,80,138,0.3);}
-.btn-ghost{
-  background:transparent;color:var(--gray);font-size:13px;
-  padding:10px;border:none;cursor:pointer;font-family:inherit;text-align:center;
-}
+/* ── buttons ── */
+.btn{border:none;border-radius:var(--r);padding:15px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:transform .1s,opacity .1s;width:100%;}
+.btn:active{transform:scale(.98);opacity:.9;}
+.btn-teal{background:var(--teal);color:#fff;box-shadow:0 4px 18px rgba(45,191,170,.35);}
+.btn-pink{background:var(--pink);color:#fff;box-shadow:0 4px 18px rgba(240,80,138,.3);}
+.btn-gray{background:var(--bg);color:var(--gray);border:2px solid var(--border);}
+.btn-sm{padding:9px 16px;font-size:13px;border-radius:10px;width:auto;}
+.btn-ghost{background:transparent;color:var(--gray);font-size:13px;padding:10px;border:none;cursor:pointer;font-family:inherit;text-align:center;width:100%;}
 .btn-ghost span{color:var(--teal);font-weight:700;}
 
-/* error */
-.err-msg{color:var(--pink);font-size:12px;text-align:center;min-height:18px;}
+/* ── onboarding ── */
+.onboard-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100dvh;padding:40px 28px;text-align:center;}
+.onboard-emoji{font-size:72px;margin-bottom:24px;}
+.onboard-title{font-size:26px;font-weight:900;margin-bottom:8px;}
+.onboard-sub{font-size:14px;color:var(--gray);margin-bottom:36px;line-height:1.6;}
+.age-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;margin-bottom:28px;}
+.age-card{background:var(--white);border:2px solid var(--border);border-radius:20px;padding:24px 16px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:var(--shadow);}
+.age-card:active{transform:scale(.97);}
+.age-card.sel{border-color:var(--teal);background:var(--teal-l);}
+.age-card .ac-icon{font-size:40px;}
+.age-card .ac-label{font-size:15px;font-weight:800;}
+.age-card .ac-sub{font-size:11px;color:var(--gray);}
+.age-card.sel .ac-sub{color:var(--teal2);}
 
-/* ── TOP BAR ── */
-.topbar{
-  padding:16px 20px 12px;
-  display:flex; align-items:center; justify-content:space-between;
-  position:sticky; top:0;
-  background:var(--white);
-  z-index:10;
-  border-bottom:1px solid var(--border);
-  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
-}
-.topbar-left .topbar-title{font-size:18px;font-weight:800;}
-.topbar-left .topbar-sub{font-size:11px;color:var(--gray);margin-top:1px;letter-spacing:1px;}
-.topbar-avatar{
-  width:40px;height:40px;border-radius:50%;
-  background:var(--teal); color:#fff;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:900;font-size:15px;cursor:pointer;flex-shrink:0;
-}
-.topbar-avatar.pink{background:var(--pink);}
+/* ── topbar ── */
+.topbar{padding:15px 18px 12px;display:flex;align-items:center;justify-content:space-between;background:var(--white);border-bottom:1px solid var(--border);box-shadow:0 1px 8px rgba(0,0,0,.05);position:sticky;top:0;z-index:10;}
+.tb-title{font-size:17px;font-weight:800;}
+.tb-sub{font-size:10px;color:var(--gray);margin-top:1px;letter-spacing:.8px;}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;cursor:pointer;flex-shrink:0;}
+.av-teal{background:var(--teal);color:#fff;}
+.av-pink{background:var(--pink);color:#fff;}
+.av-amber{background:var(--amber);color:#fff;}
 
-/* ── BOTTOM NAV ── */
-.bottom-nav{
-  position:fixed; bottom:0; left:50%; transform:translateX(-50%);
-  width:100%; max-width:430px; height:var(--tab-h);
-  background:var(--white); border-top:1px solid var(--border);
-  display:none; align-items:center; z-index:100;
-  box-shadow:0 -2px 12px rgba(0,0,0,0.06);
-}
-.bottom-nav.visible{display:flex;}
-.nav-item{
-  flex:1; display:flex; flex-direction:column;
-  align-items:center; justify-content:center; gap:3px;
-  cursor:pointer; padding:8px 0; color:var(--gray);
-  font-size:10px; letter-spacing:.3px;
-  transition:color .2s; border:none; background:none; font-family:inherit;
-}
-.nav-item .icon{font-size:22px;line-height:1;}
-.nav-item.active{color:var(--teal);}
+/* ── bottom nav ── */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--tab);background:var(--white);border-top:1px solid var(--border);display:none;align-items:center;z-index:100;box-shadow:0 -2px 10px rgba(0,0,0,.05);}
+.bnav.on{display:flex;}
+.nitem{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:8px 0;color:var(--gray);font-size:10px;letter-spacing:.3px;transition:color .2s;border:none;background:none;font-family:inherit;}
+.nitem .ni{font-size:21px;line-height:1;}
+.nitem.on{color:var(--teal);}
 
-/* ── SCROLL ── */
-.scroll-content{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px;}
-.page-section{display:none;}
-.page-section.active{display:flex;flex-direction:column;gap:16px;}
+/* ── scroll ── */
+.scrl{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:15px;}
+.pg{display:none;}
+.pg.on{display:flex;flex-direction:column;gap:15px;}
 
-/* ── CARD ── */
-.card{
-  background:var(--white); border-radius:var(--radius);
-  padding:18px; box-shadow:var(--shadow);
-}
-.card-label{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gray);text-transform:uppercase;margin-bottom:12px;}
+/* ── card ── */
+.card{background:var(--white);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);}
+.clabel{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gray);text-transform:uppercase;margin-bottom:12px;}
 
-/* ── LESSON CARD ── */
-.lesson-card{
-  background:linear-gradient(135deg, var(--teal) 0%, #1a9e8c 100%);
-  border-radius:20px; padding:24px; position:relative; overflow:hidden;
-  box-shadow:0 6px 28px rgba(45,191,170,0.4);
-}
-.lesson-card::after{content:'🏓';position:absolute;font-size:110px;right:-18px;bottom:-18px;opacity:.12;}
-.lc-name{font-size:12px;color:rgba(255,255,255,0.75);letter-spacing:1px;margin-bottom:4px;}
-.lc-pts{font-size:56px;font-weight:900;color:#fff;line-height:1;font-family:'DM Sans',sans-serif;}
-.lc-pts span{font-size:18px;font-weight:400;color:rgba(255,255,255,0.7);margin-left:4px;}
-.lc-type{display:inline-block;background:rgba(255,255,255,0.2);color:#fff;font-size:11px;padding:4px 12px;border-radius:20px;margin-top:10px;letter-spacing:.5px;}
-.lc-type.vip{background:var(--pink);box-shadow:0 2px 10px rgba(240,80,138,0.4);}
+/* ── lesson card ── */
+.lcard{background:linear-gradient(135deg,var(--teal) 0%,var(--teal2) 100%);border-radius:20px;padding:22px;position:relative;overflow:hidden;box-shadow:0 6px 26px rgba(45,191,170,.38);}
+.lcard::after{content:'🏓';position:absolute;font-size:100px;right:-16px;bottom:-16px;opacity:.1;}
+.lc-name{font-size:12px;color:rgba(255,255,255,.72);letter-spacing:.8px;margin-bottom:3px;}
+.lc-pts{font-size:52px;font-weight:900;color:#fff;line-height:1;font-family:'DM Sans',sans-serif;}
+.lc-pts span{font-size:17px;font-weight:400;color:rgba(255,255,255,.65);margin-left:3px;}
+.lc-badge{display:inline-block;font-size:11px;padding:4px 12px;border-radius:20px;margin-top:10px;font-weight:700;}
+.lc-std{background:rgba(255,255,255,.2);color:#fff;}
+.lc-vip{background:var(--pink);color:#fff;box-shadow:0 2px 10px rgba(240,80,138,.4);}
+.stamps{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:15px;}
+.stamp{aspect-ratio:1;border-radius:9px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;}
+.stamp.used{background:rgba(255,255,255,.88);}
+.stamp.used::after{content:'✓';color:var(--teal);font-weight:900;font-size:12px;}
 
-.stamps-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:16px;}
-.stamp{
-  aspect-ratio:1;border-radius:10px;
-  background:rgba(255,255,255,0.15);
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;transition:all .3s;
-}
-.stamp.used{background:rgba(255,255,255,0.9);}
-.stamp.used::after{content:'✓';color:var(--teal);font-size:13px;font-weight:900;}
+/* ── quick grid ── */
+.qgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.qbtn{background:var(--white);border:2px solid var(--border);border-radius:var(--r);padding:16px 13px;display:flex;flex-direction:column;gap:7px;cursor:pointer;text-align:left;font-family:inherit;color:var(--dark);box-shadow:var(--shadow);transition:all .2s;}
+.qbtn:active{transform:scale(.97);}
+.qbtn.t{border-color:rgba(45,191,170,.4);background:var(--teal-l);}
+.qbtn.p{border-color:rgba(240,80,138,.3);background:var(--pink-l);}
+.qi{font-size:25px;}
+.ql{font-size:13px;font-weight:700;}
+.qs{font-size:11px;color:var(--gray);}
 
-/* ── QUICK ACTIONS ── */
-.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.quick-btn{
-  background:var(--white); border:2px solid var(--border);
-  border-radius:var(--radius); padding:16px 14px;
-  display:flex;flex-direction:column;gap:8px;
-  cursor:pointer; transition:all .2s; text-align:left;
-  font-family:inherit; color:var(--dark); box-shadow:var(--shadow);
-}
-.quick-btn:active{transform:scale(0.97);}
-.quick-btn.teal{border-color:rgba(45,191,170,.4);background:var(--teal-l);}
-.quick-btn.pink-btn{border-color:rgba(240,80,138,.3);background:var(--pink-l);}
-.q-icon{font-size:26px;}
-.q-label{font-size:13px;font-weight:700;}
-.q-sub{font-size:11px;color:var(--gray);}
+/* ── section header ── */
+.shdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.stitle{font-size:15px;font-weight:800;}
+.sact{font-size:12px;color:var(--teal);font-weight:600;cursor:pointer;}
 
-/* ── SECTION HEADER ── */
-.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.sec-title{font-size:15px;font-weight:800;}
-.sec-action{font-size:12px;color:var(--teal);font-weight:600;cursor:pointer;}
+/* ── schedule item ── */
+.si{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);}
+.si:last-child{border-bottom:none;padding-bottom:0;}
+.si-time{font-size:12px;color:var(--gray);min-width:44px;font-weight:700;}
+.si-info{flex:1;}
+.si-name{font-size:14px;font-weight:700;}
+.si-sub{font-size:11px;color:var(--gray);margin-top:2px;}
+.badge{font-size:10px;padding:4px 9px;border-radius:20px;font-weight:700;letter-spacing:.3px;white-space:nowrap;}
+.bg{background:var(--teal-l);color:var(--teal2);}
+.bp{background:var(--pink-l);color:var(--pink);}
+.bd{background:#fff3e0;color:#d97700;}
 
-/* ── SCHEDULE ── */
-.sched-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
-.sched-item:last-child{border-bottom:none;padding-bottom:0;}
-.sched-time{font-size:13px;color:var(--gray);min-width:48px;font-weight:600;}
-.sched-info{flex:1;}
-.sched-name{font-size:14px;font-weight:700;}
-.sched-coach{font-size:11px;color:var(--gray);margin-top:2px;}
-.badge{font-size:10px;padding:4px 9px;border-radius:20px;font-weight:700;letter-spacing:.5px;white-space:nowrap;}
-.badge-group{background:var(--teal-l);color:var(--teal2);}
-.badge-private{background:var(--pink-l);color:var(--pink);}
-.badge-duo{background:#fff3e0;color:#e07b00;}
+/* ── courts ── */
+.cgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.cbtn{aspect-ratio:1;border-radius:var(--r);border:2px solid var(--border);background:var(--white);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:all .2s;font-family:inherit;box-shadow:var(--shadow);}
+.cbtn .cn{font-size:22px;font-weight:900;}
+.cbtn .cl{font-size:9px;letter-spacing:1px;font-weight:700;}
+.cbtn.avail{border-color:var(--teal);background:var(--teal-l);}
+.cbtn.avail .cn{color:var(--teal);}
+.cbtn.avail .cl{color:var(--teal);}
+.cbtn.occ{border-color:rgba(240,80,138,.4);background:var(--pink-l);cursor:not-allowed;}
+.cbtn.occ .cn{color:var(--pink);}
+.cbtn.occ .cl{color:var(--pink);}
+.cleg{display:flex;gap:14px;margin-top:10px;}
+.li{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--gray);}
+.ld{width:8px;height:8px;border-radius:50%;}
 
-/* ── COURTS ── */
-.courts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-.court-btn{
-  aspect-ratio:1;border-radius:var(--radius);
-  border:2px solid var(--border);background:var(--white);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  cursor:pointer;transition:all .2s;font-family:inherit;box-shadow:var(--shadow);
-}
-.court-btn .c-num{font-size:24px;font-weight:900;}
-.court-btn .c-label{font-size:9px;letter-spacing:1px;font-weight:600;}
-.court-btn.available{border-color:var(--teal);background:var(--teal-l);}
-.court-btn.available .c-num{color:var(--teal);}
-.court-btn.available .c-label{color:var(--teal);}
-.court-btn.occupied{border-color:rgba(240,80,138,.4);background:var(--pink-l);cursor:not-allowed;}
-.court-btn.occupied .c-num{color:var(--pink);}
-.court-btn.occupied .c-label{color:var(--pink);}
-.courts-legend{display:flex;gap:16px;margin-top:10px;}
-.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--gray);}
-.legend-dot{width:8px;height:8px;border-radius:50%;}
+/* ── date strip ── */
+.dstrip{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none;}
+.dstrip::-webkit-scrollbar{display:none;}
+.dchip{flex-shrink:0;padding:8px 13px;border-radius:20px;border:2px solid var(--border);background:var(--white);display:flex;flex-direction:column;align-items:center;cursor:pointer;transition:all .2s;font-family:inherit;}
+.dchip .dd{font-size:10px;color:var(--gray);font-weight:600;}
+.dchip .dn{font-size:16px;font-weight:900;}
+.dchip.on{background:var(--teal);border-color:var(--teal);}
+.dchip.on .dd,.dchip.on .dn{color:#fff;}
 
-/* ── DATE STRIP ── */
-.date-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
-.date-strip::-webkit-scrollbar{display:none;}
-.date-chip{
-  flex-shrink:0;padding:8px 14px;border-radius:20px;
-  border:2px solid var(--border);background:var(--white);
-  display:flex;flex-direction:column;align-items:center;
-  cursor:pointer;transition:all .2s;font-family:inherit;
-}
-.date-chip .d-day{font-size:10px;color:var(--gray);font-weight:600;}
-.date-chip .d-num{font-size:17px;font-weight:900;}
-.date-chip.active{background:var(--teal);border-color:var(--teal);}
-.date-chip.active .d-day,.date-chip.active .d-num{color:#fff;}
+/* ── schedule filter tabs ── */
+.ftabs{display:flex;gap:8px;margin-bottom:2px;}
+.ftab{flex-shrink:0;padding:8px 18px;border-radius:20px;border:2px solid var(--border);background:var(--white);color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
+.ftab.on{background:var(--teal);color:#fff;border-color:var(--teal);}
 
-/* ── STATS ── */
-.stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
-.stat-box{background:var(--white);border-radius:var(--radius);padding:14px 10px;text-align:center;box-shadow:var(--shadow);}
-.stat-num{font-size:26px;font-weight:900;color:var(--teal);line-height:1;font-family:'DM Sans',sans-serif;}
-.stat-label{font-size:10px;color:var(--gray);margin-top:4px;font-weight:600;}
+/* ── stats ── */
+.srow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.sbox{background:var(--white);border-radius:var(--r);padding:14px 10px;text-align:center;box-shadow:var(--shadow);}
+.snum{font-size:25px;font-weight:900;color:var(--teal);line-height:1;font-family:'DM Sans',sans-serif;}
+.slbl{font-size:10px;color:var(--gray);margin-top:4px;font-weight:700;}
 
-/* ── COACH CARD ── */
-.coach-card{background:var(--white);border-radius:var(--radius);padding:16px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);}
-.coach-avatar{width:48px;height:48px;border-radius:50%;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
-.coach-info{flex:1;}
-.coach-name{font-size:15px;font-weight:800;}
-.coach-hours{font-size:12px;color:var(--gray);margin-top:2px;}
-.coach-bar-wrap{height:5px;background:var(--border);border-radius:3px;margin-top:8px;}
-.coach-bar{height:5px;background:linear-gradient(90deg,var(--teal),#1a9e8c);border-radius:3px;transition:width .6s;}
-.coach-hrs-big{font-size:17px;font-weight:900;color:var(--teal);flex-shrink:0;font-family:'DM Sans',sans-serif;}
+/* ── coach hours banner ── */
+.hours-banner{background:linear-gradient(135deg,var(--teal),var(--teal2));border-radius:20px;padding:22px;color:#fff;box-shadow:0 6px 24px rgba(45,191,170,.38);}
+.hb-label{font-size:12px;color:rgba(255,255,255,.72);letter-spacing:1px;margin-bottom:4px;}
+.hb-num{font-size:56px;font-weight:900;font-family:'DM Sans',sans-serif;line-height:1;}
+.hb-num span{font-size:20px;font-weight:400;color:rgba(255,255,255,.7);margin-left:4px;}
+.hb-sub{font-size:12px;color:rgba(255,255,255,.65);margin-top:8px;}
 
-/* ── MEMBER LIST ── */
-.member-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;}
-.member-item:last-child{border-bottom:none;}
-.member-av{width:38px;height:38px;border-radius:50%;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--teal);flex-shrink:0;}
-.member-av.pink{background:var(--pink-l);color:var(--pink);}
-.member-info{flex:1;}
-.member-name{font-size:14px;font-weight:700;}
-.member-phone{font-size:11px;color:var(--gray);margin-top:2px;}
-.member-pts{font-size:16px;font-weight:900;color:var(--teal);font-family:'DM Sans',sans-serif;}
-.member-pts.low{color:var(--pink);}
-.vip-tag{display:inline-block;background:var(--pink-l);color:var(--pink);font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;letter-spacing:.5px;margin-left:4px;vertical-align:middle;}
+/* ── coach card ── */
+.coach-card{background:var(--white);border-radius:var(--r);padding:15px;display:flex;align-items:center;gap:13px;box-shadow:var(--shadow);}
+.cav{width:46px;height:46px;border-radius:50%;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.cinfo{flex:1;}
+.cname{font-size:15px;font-weight:800;}
+.chours{font-size:12px;color:var(--gray);margin-top:2px;}
+.cbar-w{height:5px;background:var(--border);border-radius:3px;margin-top:8px;}
+.cbar{height:5px;background:linear-gradient(90deg,var(--teal),var(--teal2));border-radius:3px;transition:width .6s;}
+.chbig{font-size:16px;font-weight:900;color:var(--teal);flex-shrink:0;font-family:'DM Sans',sans-serif;}
 
-/* ── PROFILE ── */
-.profile-hero{background:linear-gradient(135deg,var(--teal) 0%,#1a9e8c 100%);border-radius:20px;padding:24px;display:flex;align-items:center;gap:16px;box-shadow:0 6px 24px rgba(45,191,170,.35);}
-.profile-av-lg{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#fff;flex-shrink:0;border:3px solid rgba(255,255,255,.5);}
-.profile-name{font-size:20px;font-weight:900;color:#fff;}
-.profile-sub{font-size:12px;color:rgba(255,255,255,.75);margin-top:3px;letter-spacing:.5px;}
-.setting-item{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer;}
-.setting-item:last-child{border-bottom:none;}
-.setting-left{display:flex;align-items:center;gap:12px;}
-.setting-icon{font-size:18px;width:28px;text-align:center;}
-.setting-text{font-size:14px;font-weight:600;}
-.history-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
-.history-item:last-child{border-bottom:none;}
-.h-type{font-size:13px;font-weight:700;}
-.h-date{font-size:11px;color:var(--gray);margin-top:2px;}
-.h-pts{font-weight:900;font-size:15px;font-family:'DM Sans',sans-serif;}
-.h-pts.minus{color:var(--pink);}
-.h-pts.plus{color:var(--teal);}
+/* ── salary card ── */
+.salary-row{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);}
+.salary-row:last-child{border-bottom:none;}
+.sr-left .sr-name{font-size:14px;font-weight:700;}
+.sr-left .sr-detail{font-size:11px;color:var(--gray);margin-top:2px;}
+.sr-amt{font-size:17px;font-weight:900;color:var(--teal);font-family:'DM Sans',sans-serif;}
 
-/* ── ADMIN TABS ── */
-.admin-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
-.admin-tabs::-webkit-scrollbar{display:none;}
-.admin-tab{flex-shrink:0;padding:9px 18px;border-radius:20px;border:2px solid var(--border);background:var(--white);color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
-.admin-tab.active{background:var(--teal);color:#fff;border-color:var(--teal);}
-.admin-section{display:none;}
-.admin-section.active{display:flex;flex-direction:column;gap:14px;}
+/* ── member ── */
+.mitem{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.mitem:last-child{border-bottom:none;}
+.mav{width:37px;height:37px;border-radius:50%;background:var(--teal-l);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--teal);flex-shrink:0;}
+.mav.p{background:var(--pink-l);color:var(--pink);}
+.minfo{flex:1;}
+.mname{font-size:14px;font-weight:700;}
+.mphone{font-size:11px;color:var(--gray);margin-top:2px;}
+.mpts{font-size:16px;font-weight:900;color:var(--teal);font-family:'DM Sans',sans-serif;}
+.mpts.lo{color:var(--pink);}
+.viptag{display:inline-block;background:var(--pink-l);color:var(--pink);font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;margin-left:4px;vertical-align:middle;}
+.agetag{display:inline-block;background:var(--teal-l);color:var(--teal2);font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;margin-left:4px;vertical-align:middle;}
 
-/* ── MODAL ── */
-.modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-end;justify-content:center;}
-.modal-backdrop.open{display:flex;}
-.modal-sheet{width:100%;max-width:430px;background:var(--white);border-radius:24px 24px 0 0;padding:24px;animation:slideUp .3s ease;}
-@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
-.modal-title{font-size:19px;font-weight:900;margin-bottom:18px;}
+/* ── profile ── */
+.phero{background:linear-gradient(135deg,var(--teal),var(--teal2));border-radius:20px;padding:22px;display:flex;align-items:center;gap:15px;box-shadow:0 6px 22px rgba(45,191,170,.34);}
+.pav-lg{width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff;flex-shrink:0;border:3px solid rgba(255,255,255,.45);}
+.pname{font-size:19px;font-weight:900;color:#fff;}
+.psub{font-size:12px;color:rgba(255,255,255,.72);margin-top:3px;}
+.setting{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.setting:last-child{border-bottom:none;}
+.sl{display:flex;align-items:center;gap:11px;}
+.si-icon{font-size:18px;width:26px;text-align:center;}
+.st{font-size:14px;font-weight:600;}
+.hitem{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.hitem:last-child{border-bottom:none;}
+.ht{font-size:13px;font-weight:700;}
+.hd{font-size:11px;color:var(--gray);margin-top:2px;}
+.hpts{font-weight:900;font-size:15px;font-family:'DM Sans',sans-serif;}
+.hpts.m{color:var(--pink);}
+.hpts.pl{color:var(--teal);}
 
-.form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
-.form-label{font-size:11px;font-weight:700;color:var(--gray);letter-spacing:1.5px;text-transform:uppercase;}
-.form-select{background:var(--bg);border:2px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--dark);font-size:14px;font-family:inherit;outline:none;width:100%;}
-.form-select:focus{border-color:var(--teal);}
+/* ── my bookings with cancel ── */
+.bitem{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid var(--border);}
+.bitem:last-child{border-bottom:none;}
+.bi-info{flex:1;}
+.bi-name{font-size:13px;font-weight:700;}
+.bi-sub{font-size:11px;color:var(--gray);margin-top:2px;}
+.cancel-btn{font-size:11px;padding:5px 11px;border-radius:8px;background:var(--pink-l);color:var(--pink);border:1px solid rgba(240,80,138,.3);cursor:pointer;font-weight:700;font-family:inherit;flex-shrink:0;}
 
-.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
-.btn-cancel{background:var(--bg);color:var(--gray);border:2px solid var(--border);border-radius:var(--radius);padding:14px;font-size:15px;cursor:pointer;font-family:inherit;font-weight:700;}
+/* ── admin tabs ── */
+.atabs{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+.atabs::-webkit-scrollbar{display:none;}
+.atab{flex-shrink:0;padding:9px 17px;border-radius:20px;border:2px solid var(--border);background:var(--white);color:var(--gray);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
+.atab.on{background:var(--teal);color:#fff;border-color:var(--teal);}
+.atab.pink-tab{border-color:rgba(240,80,138,.4);color:var(--pink);}
+.asec{display:none;}
+.asec.on{display:flex;flex-direction:column;gap:14px;}
 
-.class-type-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
-.class-type-btn{padding:14px 8px;border:2px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--gray);font-size:12px;font-family:inherit;cursor:pointer;text-align:center;transition:all .2s;font-weight:700;}
-.class-type-btn .ct-icon{font-size:22px;display:block;margin-bottom:4px;}
-.class-type-btn.selected{border-color:var(--teal);background:var(--teal-l);color:var(--teal2);}
+/* ── modal ── */
+.mback{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:flex-end;justify-content:center;}
+.mback.on{display:flex;}
+.msheet{width:100%;max-width:430px;background:var(--white);border-radius:24px 24px 0 0;padding:22px;animation:su .28s ease;max-height:92dvh;overflow-y:auto;}
+@keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.mhandle{width:38px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;}
+.mtitle{font-size:18px;font-weight:900;margin-bottom:16px;}
+.brow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
 
-.deduct-preview{background:var(--bg);border-radius:var(--radius);padding:16px;text-align:center;margin-bottom:16px;}
-.dp-num{font-size:40px;font-weight:900;color:var(--pink);font-family:'DM Sans',sans-serif;}
-.dp-label{font-size:12px;color:var(--gray);margin-top:4px;}
+/* ── overlay ── */
+.overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;}
+.overlay.on{display:block;}
+.ohdr{padding:48px 24px 30px;border-radius:0 0 26px 26px;}
+.ohdr.teal{background:linear-gradient(135deg,var(--teal),var(--teal2));}
+.ohdr.pink{background:linear-gradient(135deg,var(--pink),#c0305a);}
+.ohdr h2{font-size:24px;font-weight:900;color:#fff;margin-top:16px;}
+.ohdr p{font-size:13px;color:rgba(255,255,255,.72);margin-top:4px;}
+.oback{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;}
+.obody{padding:22px;display:flex;flex-direction:column;gap:13px;}
 
-/* ── REGISTER FORM ── */
-.register-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:300;overflow-y:auto;}
-.register-overlay.open{display:block;}
-.reg-header{background:linear-gradient(135deg,var(--teal),#1a9e8c);padding:50px 24px 32px;border-radius:0 0 28px 28px;}
-.reg-header h2{font-size:26px;font-weight:900;color:#fff;}
-.reg-header p{font-size:13px;color:rgba(255,255,255,.75);margin-top:4px;}
-.reg-body{padding:24px;display:flex;flex-direction:column;gap:14px;}
+/* ── class type grid ── */
+.ctgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+.ctbtn{padding:13px 6px;border:2px solid var(--border);border-radius:var(--r);background:var(--bg);color:var(--gray);font-size:12px;font-family:inherit;cursor:pointer;text-align:center;transition:all .2s;font-weight:700;}
+.ctbtn .cti{font-size:20px;display:block;margin-bottom:4px;}
+.ctbtn.on{border-color:var(--teal);background:var(--teal-l);color:var(--teal2);}
+.dprev{background:var(--bg);border-radius:var(--r);padding:15px;text-align:center;margin-bottom:14px;}
+.dpnum{font-size:38px;font-weight:900;color:var(--pink);font-family:'DM Sans',sans-serif;}
+.dplbl{font-size:12px;color:var(--gray);margin-top:3px;}
 
-/* ── TOAST ── */
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--teal);color:#fff;font-weight:700;font-size:13px;padding:11px 24px;border-radius:20px;opacity:0;transition:all .3s;z-index:400;white-space:nowrap;pointer-events:none;box-shadow:0 4px 16px rgba(45,191,170,.4);}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.toast.err{background:var(--pink);box-shadow:0 4px 16px rgba(240,80,138,.4);}
+/* ── vip banner ── */
+.vbanner{background:linear-gradient(135deg,var(--pink),#c0305a);border-radius:16px;padding:18px;color:#fff;box-shadow:0 4px 18px rgba(240,80,138,.32);}
+.vbanner h3{font-size:16px;font-weight:900;margin-bottom:4px;}
+.vbanner p{font-size:12px;opacity:.82;}
 
-/* ── LOADING ── */
-.loading{text-align:center;padding:40px;color:var(--gray);}
-.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px;}
+/* ── hourly rate input ── */
+.rate-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.rate-item:last-child{border-bottom:none;}
+.rate-left .rn{font-size:14px;font-weight:700;}
+.rate-left .rs{font-size:11px;color:var(--gray);}
+.rate-input{width:90px;background:var(--bg);border:2px solid var(--border);border-radius:10px;padding:8px 10px;font-size:15px;font-weight:700;text-align:right;font-family:'DM Sans',sans-serif;color:var(--teal);outline:none;}
+.rate-input:focus{border-color:var(--teal);}
+
+/* ── loading / empty ── */
+.loading{text-align:center;padding:32px;color:var(--gray);}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px;}
 @keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:20px;color:var(--gray);font-size:13px;}
 
-/* ── SEARCH ── */
-.search-bar{display:flex;gap:8px;align-items:center;}
-.search-bar input{flex:1;background:var(--white);border:2px solid var(--border);border-radius:12px;padding:11px 14px;font-size:14px;font-family:inherit;outline:none;color:var(--dark);}
-.search-bar input:focus{border-color:var(--teal);}
-
-/* ── VIP SPECIAL SECTION ── */
-.vip-banner{background:linear-gradient(135deg,var(--pink) 0%,#c0305a 100%);border-radius:16px;padding:18px;color:#fff;box-shadow:0 4px 20px rgba(240,80,138,.35);}
-.vip-banner h3{font-size:16px;font-weight:900;margin-bottom:4px;}
-.vip-banner p{font-size:12px;opacity:.85;}
+/* ── toast ── */
+.toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(18px);background:var(--teal);color:#fff;font-weight:700;font-size:13px;padding:10px 22px;border-radius:20px;opacity:0;transition:all .3s;z-index:500;white-space:nowrap;pointer-events:none;box-shadow:0 4px 14px rgba(45,191,170,.38);}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.err{background:var(--pink);}
 </style>
 </head>
 <body>
 
-<!-- ════════ LOGIN ════════ -->
-<div id="login-screen" class="screen active">
-  <div class="login-header">
-    <div class="login-logo">
+<!-- ═══════ LOGIN ═══════ -->
+<div id="scr-login" class="screen active">
+  <div class="lhdr">
+    <div class="logo-row">
       <div class="logo-ring"></div>
-      <div class="logo-text">
-        <div class="brand">Spin 40+</div>
-        <div class="sub">桌球概念館</div>
-      </div>
+      <div><div class="brand">Spin 40+</div><div class="brand-sub">桌球概念館</div></div>
     </div>
-    <div class="login-tagline">
-      <h1>登入系統</h1>
-      <p>台南市中西區健康路一段 152 號 2F</p>
-    </div>
+    <h1>歡迎回來</h1>
+    <p>臺南市中西區健康路一段 152 號 2F</p>
   </div>
-
-  <div class="login-body">
+  <div class="fbody">
     <div>
-      <div class="field-label" style="margin-bottom:8px;">身分選擇</div>
+      <div class="flabel" style="margin-bottom:8px;">登入身分</div>
       <div class="role-tabs">
-        <button class="role-tab active" onclick="selectRole('student',this)">🧑 學員</button>
-        <button class="role-tab" onclick="selectRole('coach',this)">🧑‍🏫 教練</button>
-        <button class="role-tab" onclick="selectRole('admin',this)">⚙️ 管理</button>
+        <button class="rtab active" onclick="selRole('student',this)">🧑 學員</button>
+        <button class="rtab" onclick="selRole('coach',this)">🧑‍🏫 教練</button>
+        <button class="rtab" onclick="selRole('admin',this)">⚙️ 管理</button>
       </div>
     </div>
-    <div class="field-wrap">
-      <div class="field-label">手機號碼</div>
-      <input class="field-input" type="tel" id="l-phone" placeholder="例：0912345678">
-    </div>
-    <div class="field-wrap">
-      <div class="field-label">密碼</div>
-      <input class="field-input" type="password" id="l-pass" placeholder="••••••">
-    </div>
-    <div class="err-msg" id="l-err"></div>
-    <button class="btn-primary" onclick="doLogin()">登入</button>
-    <button class="btn-ghost" onclick="openRegister()">還沒有帳號？<span>立即註冊</span></button>
+    <div><div class="flabel">手機號碼</div><input class="finput" type="tel" id="l-phone" placeholder="0912345678"></div>
+    <div><div class="flabel">密碼</div><input class="finput" type="password" id="l-pass" placeholder="••••••"></div>
+    <div class="errmsg" id="l-err"></div>
+    <button class="btn btn-teal" onclick="doLogin()">登入</button>
+    <button class="btn-ghost" onclick="openReg()">還沒有帳號？<span>立即註冊</span></button>
   </div>
 </div>
 
-<!-- ════════ STUDENT SCREEN ════════ -->
-<div id="student-screen" class="screen">
-  <div class="topbar">
-    <div class="topbar-left">
-      <div class="topbar-title" id="s-name">Hi 👋</div>
-      <div class="topbar-sub" id="s-role-label">學員</div>
+<!-- ═══════ ONBOARD (age select) ═══════ -->
+<div id="scr-onboard" class="screen">
+  <div class="onboard-wrap">
+    <div class="onboard-emoji">🏓</div>
+    <div class="onboard-title">你是哪種學員？</div>
+    <div class="onboard-sub">選擇後課表會自動幫你篩選<br>適合你的班別，之後也可以修改</div>
+    <div class="age-cards" id="age-cards">
+      <div class="age-card" onclick="selAge('adult',this)">
+        <div class="ac-icon">🧑</div>
+        <div class="ac-label">成人</div>
+        <div class="ac-sub">18歲以上</div>
+      </div>
+      <div class="age-card" onclick="selAge('youth',this)">
+        <div class="ac-icon">🧒</div>
+        <div class="ac-label">青少年</div>
+        <div class="ac-sub">18歲以下</div>
+      </div>
     </div>
-    <div class="topbar-avatar" id="s-av" onclick="sShowTab('s-profile')">？</div>
+    <div class="errmsg" id="ob-err"></div>
+    <button class="btn btn-teal" onclick="confirmAge()">確認進入</button>
   </div>
-  <div class="scroll-content">
+</div>
+
+<!-- ═══════ STUDENT ═══════ -->
+<div id="scr-student" class="screen">
+  <div class="topbar">
+    <div><div class="tb-title" id="s-greeting">Hi 👋</div><div class="tb-sub" id="s-role-sub">學員</div></div>
+    <div class="avatar av-teal" id="s-av" onclick="sTab('s-profile')">？</div>
+  </div>
+  <div class="scrl">
     <!-- HOME -->
-    <div id="s-home" class="page-section active">
-      <div class="lesson-card">
+    <div id="s-home" class="pg on">
+      <div class="lcard">
         <div class="lc-name">電子課程卡 · Spin 40+</div>
         <div class="lc-pts" id="lc-pts">— <span>/ 11 點</span></div>
-        <div id="lc-type-badge"><span class="lc-type">標準學員</span></div>
-        <div class="stamps-grid" id="stamps-grid"></div>
+        <div id="lc-badge-wrap"><span class="lc-badge lc-std">標準學員</span></div>
+        <div class="stamps" id="stamps"></div>
       </div>
       <div>
-        <div class="sec-hdr"><div class="sec-title">快速功能</div></div>
-        <div class="quick-grid">
-          <button class="quick-btn teal" onclick="sShowTab('s-book')"><div class="q-icon">🏓</div><div class="q-label">預約場地</div><div class="q-sub">6 桌即時狀況</div></button>
-          <button class="quick-btn" onclick="sShowTab('s-schedule')"><div class="q-icon">📅</div><div class="q-label">課程表</div><div class="q-sub">本週所有課程</div></button>
-          <button class="quick-btn" onclick="sShowTab('s-profile')"><div class="q-icon">📋</div><div class="q-label">扣點紀錄</div><div class="q-sub">近期消費</div></button>
-          <button class="quick-btn pink-btn" id="vip-btn" style="display:none" onclick="sShowTab('s-vip')"><div class="q-icon">⭐</div><div class="q-label">月費專區</div><div class="q-sub">競技隊專用</div></button>
+        <div class="shdr"><div class="stitle">快速功能</div></div>
+        <div class="qgrid">
+          <button class="qbtn t" onclick="sTab('s-book')"><div class="qi">🏓</div><div class="ql">預約場地</div><div class="qs">6 桌即時狀況</div></button>
+          <button class="qbtn" onclick="sTab('s-schedule')"><div class="qi">📅</div><div class="ql">課程表</div><div class="qs">依班別篩選</div></button>
+          <button class="qbtn" onclick="sTab('s-profile')"><div class="qi">📋</div><div class="ql">扣點紀錄</div><div class="qs">近期消費</div></button>
+          <button class="qbtn p" id="vip-quick" style="display:none" onclick="sTab('s-vip')"><div class="qi">⭐</div><div class="ql">月費專區</div><div class="qs">競技隊專用</div></button>
         </div>
       </div>
       <div>
-        <div class="sec-hdr"><div class="sec-title">今日課程</div><div class="sec-action" onclick="sShowTab('s-schedule')">查看全週 →</div></div>
-        <div class="card" id="today-classes"><div class="loading"><div class="spinner"></div>載入中</div></div>
+        <div class="shdr"><div class="stitle">今日課程</div><div class="sact" onclick="sTab('s-schedule')">查看全週 →</div></div>
+        <div class="card" id="today-cls"><div class="loading"><div class="spinner"></div>載入中</div></div>
       </div>
     </div>
 
     <!-- BOOKING -->
-    <div id="s-book" class="page-section">
+    <div id="s-book" class="pg">
+      <div><div class="clabel">選擇日期</div><div class="dstrip" id="s-dstrip"></div></div>
       <div>
-        <div class="card-label">選擇日期</div>
-        <div class="date-strip" id="s-date-strip"></div>
+        <div class="shdr"><div class="stitle">選擇桌號</div><div style="font-size:11px;color:var(--gray)">點選可用桌</div></div>
+        <div class="cgrid" id="cgrid-s"></div>
+        <div class="cleg"><div class="li"><div class="ld" style="background:var(--teal)"></div>可預約</div><div class="li"><div class="ld" style="background:var(--pink)"></div>已佔用</div></div>
       </div>
       <div>
-        <div class="sec-hdr"><div class="sec-title">選擇桌號</div><div style="font-size:11px;color:var(--gray)">點選可用桌</div></div>
-        <div class="courts-grid" id="courts-grid-s"><div class="loading"><div class="spinner"></div>載入中</div></div>
-        <div class="courts-legend"><div class="legend-item"><div class="legend-dot" style="background:var(--teal)"></div>可預約</div><div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div>已佔用</div></div>
-      </div>
-      <div>
-        <div class="sec-hdr"><div class="sec-title">我的預約</div></div>
-        <div class="card" id="my-bookings"><div style="text-align:center;color:var(--gray);padding:16px;font-size:13px;">尚無預約紀錄</div></div>
+        <div class="shdr"><div class="stitle">我的預約</div></div>
+        <div class="card" id="my-bookings"><div class="empty">尚無預約紀錄</div></div>
       </div>
     </div>
 
     <!-- SCHEDULE -->
-    <div id="s-schedule" class="page-section">
-      <div class="card-label">固定課程表</div>
-      <div class="card">
-        <div style="font-size:12px;font-weight:800;color:var(--gray);letter-spacing:1px;margin-bottom:12px;">週一 ／ 週三 ／ 週四 ／ 週五</div>
-        <div class="sched-item"><div class="sched-time">13:30</div><div class="sched-info"><div class="sched-name">學生競技團班</div><div class="sched-coach">1.5hr · 最多 5 人</div></div><div class="badge badge-group">團 −1pts</div></div>
-        <div class="sched-item"><div class="sched-time">15:00</div><div class="sched-info"><div class="sched-name">學生競技團班</div><div class="sched-coach">1.5hr · 最多 5 人</div></div><div class="badge badge-group">團 −1pts</div></div>
-        <div class="sched-item"><div class="sched-time">16:30</div><div class="sched-info"><div class="sched-name">學生競技團班</div><div class="sched-coach">1.5hr · 最多 5 人</div></div><div class="badge badge-group">團 −1pts</div></div>
-        <div class="sched-item"><div class="sched-time">19:00</div><div class="sched-info"><div class="sched-name">全年齡競技團班</div><div class="sched-coach">1.5hr · 開放報名</div></div><div class="badge badge-group">團 −1pts</div></div>
+    <div id="s-schedule" class="pg">
+      <div>
+        <div class="clabel" style="margin-bottom:8px;">班別篩選</div>
+        <div class="ftabs">
+          <button class="ftab on" id="ft-all" onclick="filterSched('all',this)">全部</button>
+          <button class="ftab" id="ft-adult" onclick="filterSched('adult',this)">成人班</button>
+          <button class="ftab" id="ft-youth" onclick="filterSched('youth',this)">學生班</button>
+          <button class="ftab" id="ft-flex" onclick="filterSched('flex',this)">個人/雙人</button>
+        </div>
       </div>
-      <div class="card">
-        <div style="font-size:12px;font-weight:800;color:var(--gray);letter-spacing:1px;margin-bottom:12px;">週二</div>
-        <div class="sched-item"><div class="sched-time">16:30</div><div class="sched-info"><div class="sched-name">學生競技團班</div><div class="sched-coach">1.5hr</div></div><div class="badge badge-group">團 −1pts</div></div>
-        <div class="sched-item"><div class="sched-time">19:00</div><div class="sched-info"><div class="sched-name">成人競技團班</div><div class="sched-coach">1.5hr</div></div><div class="badge badge-group">團 −1pts</div></div>
-      </div>
-      <div class="card">
-        <div style="font-size:12px;font-weight:800;color:var(--gray);letter-spacing:1px;margin-bottom:12px;">週六</div>
-        <div class="sched-item"><div class="sched-time">09:30</div><div class="sched-info"><div class="sched-name">學生競技團班</div><div class="sched-coach">1.5hr</div></div><div class="badge badge-group">團 −1pts</div></div>
-        <div class="sched-item"><div class="sched-time">14:00</div><div class="sched-info"><div class="sched-name">學生競技團班 A/B</div><div class="sched-coach">1.5hr · 超過5人自動分班</div></div><div class="badge badge-group">團 −1pts</div></div>
-        <div class="sched-item"><div class="sched-time">15:30</div><div class="sched-info"><div class="sched-name">學生競技團班</div><div class="sched-coach">1.5hr</div></div><div class="badge badge-group">團 −1pts</div></div>
-        <div class="sched-item"><div class="sched-time">19:00</div><div class="sched-info"><div class="sched-name">成人競技團班</div><div class="sched-coach">1.5hr</div></div><div class="badge badge-group">團 −1pts</div></div>
-      </div>
-      <div class="card">
-        <div style="font-size:12px;font-weight:800;color:var(--gray);letter-spacing:1px;margin-bottom:12px;">個人 ／ 雙人課（彈性預約）</div>
-        <div class="sched-item"><div class="sched-time">彈性</div><div class="sched-info"><div class="sched-name">個人班</div><div class="sched-coach">1hr · 與教練預約</div></div><div class="badge badge-private">個 −2pts</div></div>
-        <div class="sched-item"><div class="sched-time">彈性</div><div class="sched-info"><div class="sched-name">雙人班</div><div class="sched-coach">1hr · 兩人各扣1點</div></div><div class="badge badge-duo">雙 各−1pts</div></div>
-      </div>
+      <div id="sched-content"></div>
     </div>
 
     <!-- VIP -->
-    <div id="s-vip" class="page-section">
-      <div class="vip-banner"><h3>⭐ 月費競技專區</h3><p>您是 Spin 40+ 月費競技隊員，享有專屬預約與訓練資源。</p></div>
+    <div id="s-vip" class="pg">
+      <div class="vbanner"><h3>⭐ 月費競技專區</h3><p>您是 Spin 40+ 月費競技隊員，享有固定時段與優先預約。</p></div>
       <div class="card">
-        <div class="card-label">月費方案說明</div>
-        <div class="sched-item"><div class="sched-info"><div class="sched-name">固定時段月費</div><div class="sched-coach">每月固定費用，不計點數扣除</div></div></div>
-        <div class="sched-item"><div class="sched-info"><div class="sched-name">優先預約</div><div class="sched-coach">場地優先保留給月費學員</div></div></div>
-        <div class="sched-item"><div class="sched-info"><div class="sched-name">客製化訓練</div><div class="sched-coach">依競技需求調整訓練計劃</div></div></div>
+        <div class="clabel">月費說明</div>
+        <div class="si"><div class="si-info"><div class="si-name">固定時段月費</div><div class="si-sub">每月固定費用，不計點數扣除</div></div></div>
+        <div class="si"><div class="si-info"><div class="si-name">優先場地保留</div><div class="si-sub">月費學員優先使用固定桌號</div></div></div>
+        <div class="si"><div class="si-info"><div class="si-name">客製化訓練計劃</div><div class="si-sub">依競技需求調整訓練內容</div></div></div>
       </div>
-      <button class="btn-primary" onclick="showToast('請聯繫管理員確認課表')">聯繫教練排課</button>
+      <button class="btn btn-pink" onclick="showToast('請聯繫管理員確認課表')">聯繫教練排課</button>
     </div>
 
     <!-- PROFILE -->
-    <div id="s-profile" class="page-section">
-      <div class="profile-hero">
-        <div class="profile-av-lg" id="p-av">？</div>
+    <div id="s-profile" class="pg">
+      <div class="phero">
+        <div class="pav-lg" id="p-av">？</div>
         <div>
-          <div class="profile-name" id="p-name">—</div>
-          <div class="profile-sub" id="p-phone">—</div>
-          <div class="profile-sub" id="p-type-label" style="margin-top:4px;">標準學員</div>
+          <div class="pname" id="p-name">—</div>
+          <div class="psub" id="p-phone">—</div>
+          <div class="psub" id="p-type">—</div>
         </div>
       </div>
       <div>
-        <div class="sec-title" style="margin-bottom:12px;">扣點紀錄</div>
-        <div class="card" id="history-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
+        <div class="stitle" style="margin-bottom:11px;">扣點紀錄</div>
+        <div class="card" id="history"><div class="loading"><div class="spinner"></div>載入中</div></div>
       </div>
       <div class="card">
-        <div class="setting-item" onclick="showToast('功能開發中')"><div class="setting-left"><span class="setting-icon">🔒</span><span class="setting-text">修改密碼</span></div><span>›</span></div>
-        <div class="setting-item" onclick="doLogout()"><div class="setting-left"><span class="setting-icon">🚪</span><span class="setting-text" style="color:var(--pink)">登出</span></div><span>›</span></div>
+        <div class="setting" onclick="showToast('功能開發中')"><div class="sl"><span class="si-icon">🔒</span><span class="st">修改密碼</span></div><span>›</span></div>
+        <div class="setting" onclick="doLogout()"><div class="sl"><span class="si-icon">🚪</span><span class="st" style="color:var(--pink)">登出</span></div><span>›</span></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ════════ ADMIN SCREEN ════════ -->
-<div id="admin-screen" class="screen">
+<!-- ═══════ COACH ═══════ -->
+<div id="scr-coach" class="screen">
   <div class="topbar">
-    <div class="topbar-left">
-      <div class="topbar-title">Spin 40+ 後台</div>
-      <div class="topbar-sub" id="a-role-lbl">管理員</div>
-    </div>
-    <div class="topbar-avatar pink" onclick="doLogout()">出</div>
+    <div><div class="tb-title" id="co-name">教練</div><div class="tb-sub">教練專區</div></div>
+    <div class="avatar av-amber" onclick="doLogout()">出</div>
   </div>
-  <div class="scroll-content">
-    <div class="admin-tabs">
-      <button class="admin-tab active" onclick="aTab('overview',this)">總覽</button>
-      <button class="admin-tab" onclick="aTab('members',this)">學員</button>
-      <button class="admin-tab" onclick="aTab('coaches',this)">教練</button>
-      <button class="admin-tab" onclick="aTab('courts',this)">場地</button>
-      <button class="admin-tab" onclick="openRoleOverlay()" style="border-color:rgba(240,80,138,.4);color:var(--pink);">⚙️ 帳號</button>
+  <div class="scrl">
+    <!-- Hours Banner -->
+    <div class="hours-banner">
+      <div class="hb-label">本月累計時數</div>
+      <div class="hb-num" id="co-hrs">0 <span>hrs</span></div>
+      <div class="hb-sub" id="co-hrs-sub">本週：0 hrs · 本月薪資試算中</div>
+    </div>
+
+    <!-- This week schedule -->
+    <div>
+      <div class="shdr"><div class="stitle">本週我的課程</div><div class="sact" onclick="openAddClass()">＋ 新增排課</div></div>
+      <div class="card" id="co-schedule"><div class="loading"><div class="spinner"></div>載入中</div></div>
+    </div>
+
+    <!-- My full schedule by day -->
+    <div>
+      <div class="shdr"><div class="stitle">課表總覽</div></div>
+      <div><div class="dstrip" id="co-dstrip"></div></div>
+      <div class="card" style="margin-top:12px;" id="co-day-sched"><div class="empty">選擇日期查看課程</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ ADMIN ═══════ -->
+<div id="scr-admin" class="screen">
+  <div class="topbar">
+    <div><div class="tb-title">Spin 40+ 後台</div><div class="tb-sub">管理員</div></div>
+    <div class="avatar av-pink" onclick="doLogout()">出</div>
+  </div>
+  <div class="scrl">
+    <div class="atabs">
+      <button class="atab on" onclick="aTab('overview',this)">總覽</button>
+      <button class="atab" onclick="aTab('members',this)">學員</button>
+      <button class="atab" onclick="aTab('coaches',this)">教練薪資</button>
+      <button class="atab" onclick="aTab('courts',this)">場地</button>
+      <button class="atab pink-tab" onclick="openRoleOvl()">⚙️ 帳號</button>
     </div>
 
     <!-- OVERVIEW -->
-    <div id="at-overview" class="admin-section active">
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-num" id="stat-members">—</div><div class="stat-label">總學員數</div></div>
-        <div class="stat-box"><div class="stat-num">6</div><div class="stat-label">球桌數</div></div>
-        <div class="stat-box"><div class="stat-num" id="stat-vip">—</div><div class="stat-label">月費VIP</div></div>
+    <div id="at-overview" class="asec on">
+      <div class="srow">
+        <div class="sbox"><div class="snum" id="st-members">—</div><div class="slbl">總學員數</div></div>
+        <div class="sbox"><div class="snum">6</div><div class="slbl">球桌數</div></div>
+        <div class="sbox"><div class="snum" id="st-vip">—</div><div class="slbl">月費VIP</div></div>
       </div>
-      <div>
-        <div class="sec-hdr"><div class="sec-title">場地即時狀況</div></div>
-        <div class="courts-grid" id="courts-grid-a"></div>
-      </div>
-      <div>
-        <div class="sec-hdr"><div class="sec-title">今日課程</div></div>
-        <div class="card" id="a-today"><div class="loading"><div class="spinner"></div>載入中</div></div>
-      </div>
+      <div><div class="shdr"><div class="stitle">場地即時狀況</div></div><div class="cgrid" id="cgrid-a"></div></div>
+      <div><div class="shdr"><div class="stitle">今日課程</div></div><div class="card" id="a-today"><div class="loading"><div class="spinner"></div>載入中</div></div></div>
     </div>
 
     <!-- MEMBERS -->
-    <div id="at-members" class="admin-section">
-      <div class="search-bar">
-        <input id="member-search" placeholder="🔍 搜尋學員姓名或電話" oninput="filterMembers()">
-        <button class="btn-primary" style="padding:11px 14px;white-space:nowrap;" onclick="openDeductModal()">扣點</button>
+    <div id="at-members" class="asec">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="finput" style="flex:1;padding:10px 13px;font-size:14px;" id="msearch" placeholder="🔍 搜尋學員" oninput="filterMembers()">
+        <button class="btn btn-teal btn-sm" onclick="openDeduct()">扣點</button>
       </div>
-      <div class="card" id="member-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <button class="btn-primary pink" onclick="openRoleOverlay()">⚙️ 身分管理</button>
-        <button class="btn-primary" onclick="showToast('新增學員請要求對方自行註冊')">＋ 建立帳號</button>
-      </div>
+      <div class="card" id="mlist"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      <button class="btn btn-teal" onclick="showToast('請使用註冊功能新增學員')">＋ 新增學員</button>
     </div>
 
-    <!-- COACHES -->
-    <div id="at-coaches" class="admin-section">
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-num" id="coach-total-h">45</div><div class="stat-label">本月總時數</div></div>
-        <div class="stat-box"><div class="stat-num">3</div><div class="stat-label">教練人數</div></div>
-        <div class="stat-box"><div class="stat-num">18</div><div class="stat-label">本月課堂</div></div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <div class="coach-card"><div class="coach-avatar">🧑‍🏫</div><div class="coach-info"><div class="coach-name">林志遠</div><div class="coach-hours">本月 24hrs · 本週 6hrs</div><div class="coach-bar-wrap"><div class="coach-bar" style="width:80%"></div></div></div><div class="coach-hrs-big">24h</div></div>
-        <div class="coach-card"><div class="coach-avatar">👩‍🏫</div><div class="coach-info"><div class="coach-name">王美玲</div><div class="coach-hours">本月 12hrs · 本週 3hrs</div><div class="coach-bar-wrap"><div class="coach-bar" style="width:40%"></div></div></div><div class="coach-hrs-big">12h</div></div>
-        <div class="coach-card"><div class="coach-avatar">🧑‍🏫</div><div class="coach-info"><div class="coach-name">吳建宏</div><div class="coach-hours">本月 9hrs · 本週 1.5hrs</div><div class="coach-bar-wrap"><div class="coach-bar" style="width:30%"></div></div></div><div class="coach-hrs-big">9h</div></div>
-      </div>
+    <!-- COACHES / SALARY -->
+    <div id="at-coaches" class="asec">
+      <div class="shdr"><div class="stitle">教練時薪設定</div><div class="sact" onclick="saveRates()">儲存時薪</div></div>
+      <div class="card" id="rate-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
+
+      <div class="shdr" style="margin-top:4px;"><div class="stitle">本月薪資結算</div><div class="sact" onclick="calcSalary()">重新計算</div></div>
+      <div class="card" id="salary-list"><div class="empty">點擊「重新計算」產生報表</div></div>
+
+      <div><div class="stitle" style="margin-bottom:10px;">教練時數</div>
+      <div style="display:flex;flex-direction:column;gap:10px;" id="coach-cards"></div></div>
     </div>
 
     <!-- COURTS -->
-    <div id="at-courts" class="admin-section">
-      <div class="courts-grid" id="courts-grid-admin"></div>
-      <div class="sec-title" style="margin-top:4px;">今日預約清單</div>
+    <div id="at-courts" class="asec">
+      <div class="cgrid" id="cgrid-admin"></div>
+      <div class="stitle" style="margin-top:14px;margin-bottom:10px;">今日預約清單</div>
       <div class="card" id="a-bookings"><div class="loading"><div class="spinner"></div>載入中</div></div>
     </div>
   </div>
 </div>
 
-<!-- ════════ BOTTOM NAV ════════ -->
-<nav class="bottom-nav" id="bottom-nav">
-  <button class="nav-item active" id="nav-home" onclick="sShowTab('s-home',this)"><span class="icon">🏠</span>首頁</button>
-  <button class="nav-item" id="nav-book" onclick="sShowTab('s-book',this)"><span class="icon">🏓</span>預約</button>
-  <button class="nav-item" id="nav-sched" onclick="sShowTab('s-schedule',this)"><span class="icon">📅</span>課表</button>
-  <button class="nav-item" id="nav-prof" onclick="sShowTab('s-profile',this)"><span class="icon">👤</span>個人</button>
+<!-- ═══════ BOTTOM NAV ═══════ -->
+<nav class="bnav" id="bnav">
+  <button class="nitem on" id="n-home" onclick="sTab('s-home')"><span class="ni">🏠</span>首頁</button>
+  <button class="nitem" id="n-book" onclick="sTab('s-book')"><span class="ni">🏓</span>預約</button>
+  <button class="nitem" id="n-sched" onclick="sTab('s-schedule')"><span class="ni">📅</span>課表</button>
+  <button class="nitem" id="n-prof" onclick="sTab('s-profile')"><span class="ni">👤</span>個人</button>
 </nav>
 
-<!-- ════════ MODALS ════════ -->
-<!-- Book Modal -->
-<div class="modal-backdrop" id="book-modal" onclick="closeModal('book-modal')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <div class="modal-title">預約 桌 <span id="book-t-num">1</span></div>
-    <div class="form-row"><div class="form-label">上課類型</div>
-      <select class="form-select" id="book-type">
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- Book -->
+<div class="mback" id="book-modal" onclick="closeModal('book-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">預約 桌 <span id="book-tnum">1</span></div>
+    <div style="margin-bottom:13px;"><div class="flabel">上課類型</div>
+      <select class="fsel" id="book-type">
         <option value="group">團體班（扣 1 點）</option>
         <option value="private">個人班（扣 2 點）</option>
         <option value="duo">雙人班（各扣 1 點）</option>
         <option value="rent">純租借（不扣點）</option>
       </select>
     </div>
-    <div class="form-row"><div class="form-label">時段</div>
-      <select class="form-select" id="book-slot">
+    <div style="margin-bottom:13px;"><div class="flabel">時段</div>
+      <select class="fsel" id="book-slot">
         <option>13:30 – 15:00（1.5hr）</option>
         <option>15:00 – 16:30（1.5hr）</option>
         <option>16:30 – 18:00（1.5hr）</option>
         <option>19:00 – 20:30（1.5hr）</option>
       </select>
     </div>
-    <div class="err-msg" id="book-err"></div>
-    <div class="btn-row">
-      <button class="btn-cancel" onclick="closeModal('book-modal')">取消</button>
-      <button class="btn-primary" onclick="confirmBooking()">確認預約</button>
+    <div class="errmsg" id="book-err"></div>
+    <div class="brow">
+      <button class="btn btn-gray" onclick="closeModal('book-modal')">取消</button>
+      <button class="btn btn-teal" onclick="confirmBook()">確認預約</button>
     </div>
   </div>
 </div>
 
-<!-- Deduct Modal -->
-<div class="modal-backdrop" id="deduct-modal" onclick="closeModal('deduct-modal')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-handle"></div>
-    <div class="modal-title">手動扣點</div>
-    <div class="form-row"><div class="form-label">選擇學員</div>
-      <select class="form-select" id="deduct-member-sel"></select>
+<!-- Deduct -->
+<div class="mback" id="deduct-modal" onclick="closeModal('deduct-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">手動扣點</div>
+    <div style="margin-bottom:13px;"><div class="flabel">選擇學員</div><select class="fsel" id="d-sel" onchange="updDeductPrev()"></select></div>
+    <div class="flabel" style="margin-bottom:8px;">課程類型</div>
+    <div class="ctgrid">
+      <button class="ctbtn on" onclick="selCt(this,1)"><span class="cti">👥</span>團體班<br><small>−1pts</small></button>
+      <button class="ctbtn" onclick="selCt(this,2)"><span class="cti">🧑</span>個人班<br><small>−2pts</small></button>
+      <button class="ctbtn" onclick="selCt(this,1)"><span class="cti">👫</span>雙人班<br><small>各−1pts</small></button>
     </div>
-    <div class="form-label" style="margin-bottom:8px;">課程類型</div>
-    <div class="class-type-grid">
-      <button class="class-type-btn selected" onclick="selClass(this,1)"><span class="ct-icon">👥</span>團體班<br><small>−1 pts</small></button>
-      <button class="class-type-btn" onclick="selClass(this,2)"><span class="ct-icon">🧑</span>個人班<br><small>−2 pts</small></button>
-      <button class="class-type-btn" onclick="selClass(this,1)"><span class="ct-icon">👫</span>雙人班<br><small>各−1 pts</small></button>
-    </div>
-    <div class="deduct-preview">
-      <div class="dp-label">扣除點數</div>
-      <div class="dp-num" id="d-pts-preview">−1</div>
-      <div class="dp-label" id="d-remain-label">確認後執行</div>
-    </div>
-    <div class="btn-row">
-      <button class="btn-cancel" onclick="closeModal('deduct-modal')">取消</button>
-      <button class="btn-primary pink" onclick="confirmDeduct()">確認扣點</button>
+    <div class="dprev"><div class="dplbl">扣除點數</div><div class="dpnum" id="dp-num">−1</div><div class="dplbl" id="dp-rem">確認後執行</div></div>
+    <div class="brow">
+      <button class="btn btn-gray" onclick="closeModal('deduct-modal')">取消</button>
+      <button class="btn btn-pink" onclick="confirmDeduct()">確認扣點</button>
     </div>
   </div>
 </div>
 
-<!-- Register Overlay -->
-<div class="register-overlay" id="reg-overlay">
-  <div class="reg-header">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-      <button onclick="closeRegister()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;">←</button>
-      <div style="font-size:14px;color:rgba(255,255,255,.8);">Spin 40+</div>
+<!-- Add Coach Class -->
+<div class="mback" id="add-class-modal" onclick="closeModal('add-class-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">新增 1 對 1 課程</div>
+    <div style="margin-bottom:13px;"><div class="flabel">課程類型</div>
+      <select class="fsel" id="ac-type">
+        <option value="private">個人班（1hr）</option>
+        <option value="duo">雙人班（1hr）</option>
+      </select>
     </div>
+    <div style="margin-bottom:13px;"><div class="flabel">學員姓名</div><input class="finput" type="text" id="ac-student" placeholder="學員姓名"></div>
+    <div style="margin-bottom:13px;"><div class="flabel">日期</div><input class="finput" type="date" id="ac-date"></div>
+    <div style="margin-bottom:13px;"><div class="flabel">時間</div>
+      <select class="fsel" id="ac-time">
+        <option>09:00</option><option>10:00</option><option>11:00</option>
+        <option>13:00</option><option>14:00</option><option>15:00</option>
+        <option>16:00</option><option>17:00</option><option>18:00</option>
+        <option>19:00</option><option>20:00</option>
+      </select>
+    </div>
+    <div style="margin-bottom:13px;"><div class="flabel">桌號</div>
+      <select class="fsel" id="ac-table">
+        <option value="1">桌 1</option><option value="2">桌 2</option><option value="3">桌 3</option>
+        <option value="4">桌 4</option><option value="5">桌 5</option><option value="6">桌 6</option>
+      </select>
+    </div>
+    <div class="errmsg" id="ac-err"></div>
+    <div class="brow">
+      <button class="btn btn-gray" onclick="closeModal('add-class-modal')">取消</button>
+      <button class="btn btn-teal" onclick="confirmAddClass()">新增課程</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cancel booking confirm -->
+<div class="mback" id="cancel-modal" onclick="closeModal('cancel-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">取消預約</div>
+    <div class="card" style="background:var(--pink-l);border:1px solid rgba(240,80,138,.3);margin-bottom:16px;">
+      <div id="cancel-info" style="font-size:14px;font-weight:700;"></div>
+      <div style="font-size:12px;color:var(--pink);margin-top:6px;">取消後點數將自動退回</div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-gray" onclick="closeModal('cancel-modal')">保留預約</button>
+      <button class="btn btn-pink" onclick="confirmCancel()">確認取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ OVERLAYS ═══════ -->
+
+<!-- Register -->
+<div class="overlay" id="ovl-reg">
+  <div class="ohdr teal">
+    <button class="oback" onclick="closeOvl('ovl-reg')">←</button>
     <h2>建立學員帳號</h2>
     <p>教練 / 管理員帳號請洽球館人員</p>
   </div>
-  <div class="reg-body">
-    <div class="field-wrap"><div class="field-label">姓名</div><input class="field-input" type="text" id="r-name" placeholder="請輸入真實姓名"></div>
-    <div class="field-wrap"><div class="field-label">手機號碼（帳號）</div><input class="field-input" type="tel" id="r-phone" placeholder="0912345678"></div>
-    <div class="field-wrap"><div class="field-label">密碼</div><input class="field-input" type="password" id="r-pass" placeholder="至少6位數"></div>
-    <div class="field-wrap"><div class="field-label">確認密碼</div><input class="field-input" type="password" id="r-pass2" placeholder="再輸入一次"></div>
-    <div class="err-msg" id="r-err"></div>
-    <button class="btn-primary" onclick="doRegister()">建立學員帳號</button>
-    <div style="text-align:center;font-size:12px;color:var(--gray);margin-top:8px;padding:10px;background:var(--bg);border-radius:10px;">
-      🔒 教練與管理員帳號由球館統一建立，無法自行註冊
-    </div>
+  <div class="obody">
+    <div><div class="flabel">姓名</div><input class="finput" type="text" id="r-name" placeholder="真實姓名"></div>
+    <div><div class="flabel">手機號碼（帳號）</div><input class="finput" type="tel" id="r-phone" placeholder="0912345678"></div>
+    <div><div class="flabel">密碼</div><input class="finput" type="password" id="r-pass" placeholder="至少6位數"></div>
+    <div><div class="flabel">確認密碼</div><input class="finput" type="password" id="r-pass2" placeholder="再輸入一次"></div>
+    <div class="errmsg" id="r-err"></div>
+    <button class="btn btn-teal" onclick="doRegister()">建立帳號</button>
+    <div style="text-align:center;font-size:12px;color:var(--gray);padding:10px;background:var(--bg);border-radius:10px;">🔒 教練與管理員帳號由球館統一建立</div>
   </div>
 </div>
 
-<!-- Role Management Overlay (admin only) -->
-<div class="register-overlay" id="role-overlay">
-  <div class="reg-header" style="background:linear-gradient(135deg,var(--pink),#c0305a);">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-      <button onclick="closeRoleOverlay()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;width:36px;height:36px;border-radius:50%;cursor:pointer;">←</button>
-      <div style="font-size:14px;color:rgba(255,255,255,.8);">管理員專用</div>
-    </div>
-    <h2>帳號身分管理</h2>
-    <p>修改學員身分、升級VIP、新增教練帳號</p>
+<!-- Role Management -->
+<div class="overlay" id="ovl-role">
+  <div class="ohdr pink">
+    <button class="oback" onclick="closeOvl('ovl-role')">←</button>
+    <h2>帳號管理</h2>
+    <p>修改身分、升級VIP、新增教練帳號</p>
   </div>
-  <div class="reg-body">
-
-    <!-- Tab switch -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
-      <button class="admin-tab active" id="rm-tab-edit" onclick="rmTab('edit',this)" style="border-radius:12px;">修改現有帳號</button>
-      <button class="admin-tab" id="rm-tab-new" onclick="rmTab('new',this)" style="border-radius:12px;">新增教練帳號</button>
+  <div class="obody">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <button class="ftab on" id="rm-t1" onclick="rmTab('edit',this)" style="border-radius:12px;">修改帳號</button>
+      <button class="ftab" id="rm-t2" onclick="rmTab('new',this)" style="border-radius:12px;">新增教練</button>
     </div>
-
-    <!-- Edit existing -->
+    <!-- edit -->
     <div id="rm-edit">
-      <div class="field-wrap" style="margin-bottom:14px;">
-        <div class="field-label">選擇帳號</div>
-        <select class="form-select" id="rm-sel" onchange="onRmSelChange()" style="background:var(--white);border:2px solid var(--border);border-radius:12px;padding:13px 14px;font-size:15px;"></select>
-      </div>
-      <div style="background:var(--bg);border-radius:14px;padding:16px;margin-bottom:14px;" id="rm-current-info">
-        <div style="font-size:11px;color:var(--gray);font-weight:700;letter-spacing:1px;margin-bottom:10px;">目前設定</div>
+      <div><div class="flabel">選擇帳號</div><select class="fsel" id="rm-sel" onchange="onRmSel()"></select></div>
+      <div style="background:var(--bg);border-radius:14px;padding:14px;">
+        <div class="flabel" style="margin-bottom:8px;">目前設定</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div><div style="font-size:10px;color:var(--gray);">身分</div><div style="font-weight:800;font-size:15px;" id="rm-cur-role">—</div></div>
-          <div><div style="font-size:10px;color:var(--gray);">類型</div><div style="font-weight:800;font-size:15px;" id="rm-cur-type">—</div></div>
-          <div><div style="font-size:10px;color:var(--gray);">點數</div><div style="font-weight:800;font-size:15px;" id="rm-cur-pts">—</div></div>
+          <div><div style="font-size:10px;color:var(--gray);">身分</div><div style="font-weight:800;font-size:15px;" id="rm-cr">—</div></div>
+          <div><div style="font-size:10px;color:var(--gray);">類型</div><div style="font-weight:800;font-size:15px;" id="rm-ct">—</div></div>
+          <div><div style="font-size:10px;color:var(--gray);">點數</div><div style="font-weight:800;font-size:15px;" id="rm-cp">—</div></div>
         </div>
       </div>
-      <div class="field-wrap" style="margin-bottom:12px;">
-        <div class="field-label">更改身分</div>
-        <select class="form-select" id="rm-role" style="background:var(--white);border:2px solid var(--border);border-radius:12px;padding:13px 14px;font-size:15px;">
+      <div><div class="flabel">更改身分</div>
+        <select class="fsel" id="rm-role">
           <option value="student">🧑 學員</option>
           <option value="coach">🧑‍🏫 教練</option>
           <option value="admin">⚙️ 管理員</option>
         </select>
       </div>
-      <div class="field-wrap" style="margin-bottom:12px;">
-        <div class="field-label">帳號類型</div>
-        <select class="form-select" id="rm-type" style="background:var(--white);border:2px solid var(--border);border-radius:12px;padding:13px 14px;font-size:15px;">
+      <div><div class="flabel">帳號類型</div>
+        <select class="fsel" id="rm-type">
           <option value="standard">一般學員</option>
-          <option value="vip">⭐ 月費VIP競技班</option>
+          <option value="vip">⭐ 月費VIP</option>
         </select>
       </div>
-      <div class="field-wrap" style="margin-bottom:14px;">
-        <div class="field-label">手動設定點數</div>
-        <input class="field-input" type="number" id="rm-pts" placeholder="留空則不修改" min="0" max="99">
-      </div>
-      <div class="err-msg" id="rm-err"></div>
-      <button class="btn-primary pink" onclick="confirmRoleChange()">確認修改</button>
+      <div><div class="flabel">設定點數（留空不修改）</div><input class="finput" type="number" id="rm-pts" placeholder="0–99" min="0" max="99"></div>
+      <div class="errmsg" id="rm-err"></div>
+      <button class="btn btn-pink" onclick="confirmRoleChange()">確認修改</button>
     </div>
-
-    <!-- Add new coach/admin -->
+    <!-- new -->
     <div id="rm-new" style="display:none;">
-      <div style="background:var(--pink-l);border:1px solid rgba(240,80,138,.3);border-radius:12px;padding:12px;margin-bottom:14px;font-size:12px;color:var(--pink);font-weight:600;">
-        ⚠️ 此功能用於新增教練或管理員帳號，請謹慎使用
-      </div>
-      <div class="field-wrap"><div class="field-label">姓名</div><input class="field-input" type="text" id="nc-name" placeholder="教練姓名"></div>
-      <div class="field-wrap"><div class="field-label">手機號碼（帳號）</div><input class="field-input" type="tel" id="nc-phone" placeholder="0912345678"></div>
-      <div class="field-wrap"><div class="field-label">密碼</div><input class="field-input" type="password" id="nc-pass" placeholder="至少6位數"></div>
-      <div class="field-wrap" style="margin-bottom:14px;">
-        <div class="field-label">身分</div>
-        <select class="form-select" id="nc-role" style="background:var(--white);border:2px solid var(--border);border-radius:12px;padding:13px 14px;font-size:15px;">
+      <div style="background:var(--pink-l);border:1px solid rgba(240,80,138,.3);border-radius:12px;padding:12px;font-size:12px;color:var(--pink);font-weight:600;">⚠️ 此功能用於建立教練/管理員帳號</div>
+      <div><div class="flabel">姓名</div><input class="finput" type="text" id="nc-name" placeholder="教練姓名"></div>
+      <div><div class="flabel">手機號碼</div><input class="finput" type="tel" id="nc-phone" placeholder="0912345678"></div>
+      <div><div class="flabel">密碼</div><input class="finput" type="password" id="nc-pass" placeholder="至少6位數"></div>
+      <div><div class="flabel">身分</div>
+        <select class="fsel" id="nc-role">
           <option value="coach">🧑‍🏫 教練</option>
           <option value="admin">⚙️ 管理員</option>
         </select>
       </div>
-      <div class="err-msg" id="nc-err"></div>
-      <button class="btn-primary pink" onclick="createStaffAccount()">建立帳號</button>
+      <div class="errmsg" id="nc-err"></div>
+      <button class="btn btn-pink" onclick="createStaff()">建立帳號</button>
     </div>
   </div>
 </div>
@@ -776,352 +736,291 @@ body{
 
 <script>
 // ═══════════════════════════════════════════
+//  FIREBASE INIT
+// ═══════════════════════════════════════════
+let DB,REF,SET,GET,ONVAL,PUSH,UPD,REMOVE;
+window.addEventListener('fb-ready',()=>{
+  const f=window._fb;
+  DB=f.db;REF=f.ref;SET=f.set;GET=f.get;ONVAL=f.onValue;PUSH=f.push;UPD=f.update;REMOVE=f.remove;
+  seedAdmin(); seedCourts(); seedSchedule();
+});
+const fb = p => REF(DB,p);
+
+// ═══════════════════════════════════════════
+//  SEED
+// ═══════════════════════════════════════════
+async function seedAdmin(){
+  const s=await GET(fb('users/000000'));
+  if(s.exists()) return;
+  await SET(fb('users/000000'),{name:'系統管理員',pw:'000000',role:'admin',pts:0,type:'standard',createdAt:Date.now()});
+}
+async function seedCourts(){
+  const s=await GET(fb('courts'));
+  if(s.exists()) return;
+  const c={};
+  for(let i=1;i<=6;i++) c[`table${i}`]={status:i<=2?'occupied':'available'};
+  await SET(fb('courts'),c);
+}
+async function seedSchedule(){
+  const k=dayKey(new Date());
+  const s=await GET(fb(`schedule/${k}`));
+  if(s.exists()) return;
+  await SET(fb(`schedule/${k}`),{
+    s1:{time:'13:30',name:'學生競技團班',coach:'林志遠',type:'group',ageGroup:'youth',seats:5,enrolled:4},
+    s2:{time:'16:30',name:'個人班',coach:'王美玲',type:'private',ageGroup:'flex',seats:1,enrolled:1},
+    s3:{time:'19:00',name:'成人競技團班',coach:'林志遠',type:'group',ageGroup:'adult',seats:5,enrolled:2},
+  });
+}
+
+// ═══════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════
-let DB, REF, SET, GET, ONVALUE, PUSH, UPDATE, SERVER_TS;
-let currentUser = null; // { phone, name, role, pts, type }
-let selectedRole = 'student';
+let CU = null; // current user
+let currentRole = 'student';
+let selAge_ = null;
 let deductAmt = 1;
-let bookingTableNum = 1;
+let bookTbl = 1;
 let allMembers = [];
-let selectedDate = '';
-
-window.addEventListener('fb-ready', () => {
-  const f = window._fb;
-  DB = f.db; REF = f.ref; SET = f.set; GET = f.get;
-  ONVALUE = f.onValue; PUSH = f.push; UPDATE = f.update; SERVER_TS = f.serverTimestamp;
-  console.log('Firebase ready ✓');
-  seedAdminAccount();
-  seedCourts();
-  seedTodaySchedule();
-});
-
-// ── Seed default admin account (only if not exists) ──
-async function seedAdminAccount(){
-  const snap = await GET(fbRef('users/000000'));
-  if(snap.exists()) return;
-  await SET(fbRef('users/000000'), {
-    name:'系統管理員', pw:'000000',
-    role:'admin', pts:0, type:'standard',
-    createdAt: Date.now()
-  });
-  console.log('Admin account seeded ✓');
-}
-
-function fbRef(path){ return REF(DB, path); }
-
-// ═══════════════════════════════════════════
-//  SEED: initial court & schedule data
-// ═══════════════════════════════════════════
-async function seedCourts(){
-  const snap = await GET(fbRef('courts'));
-  if(snap.exists()) return;
-  const courts = {};
-  for(let i=1;i<=6;i++){
-    courts[`table${i}`] = { status: i<=3 ? 'occupied' : 'available', label:`桌 ${i}` };
-  }
-  await SET(fbRef('courts'), courts);
-}
-
-async function seedTodaySchedule(){
-  const today = todayKey();
-  const snap = await GET(fbRef(`schedule/${today}`));
-  if(snap.exists()) return;
-  await SET(fbRef(`schedule/${today}`), {
-    s1:{ time:'13:30', name:'學生競技團班', coach:'林志遠', type:'group', seats:5, enrolled:4 },
-    s2:{ time:'16:30', name:'個人班', coach:'王美玲', type:'private', seats:1, enrolled:1 },
-    s3:{ time:'19:00', name:'學生競技團班', coach:'林志遠', type:'group', seats:5, enrolled:2 },
-  });
-}
-
-function todayKey(){
-  const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-}
+let cancelKey_ = null;
+let cancelPts_ = 0;
+let cancelTbl_ = null;
+let schedFilter = 'all';
 
 // ═══════════════════════════════════════════
 //  AUTH
 // ═══════════════════════════════════════════
-function selectRole(r, el){
-  selectedRole = r;
-  document.querySelectorAll('.role-tab').forEach(b=>b.classList.remove('active'));
+function selRole(r,el){
+  currentRole=r;
+  document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
 }
 
 async function doLogin(){
-  if(!DB){ showToast('系統初始化中，請稍後','err'); return; }
-  const phone = document.getElementById('l-phone').value.trim();
-  const pass  = document.getElementById('l-pass').value;
-  const err   = document.getElementById('l-err');
-  err.textContent = '';
-  if(!phone||!pass){ err.textContent='請填寫帳號與密碼'; return; }
-
+  if(!DB){showToast('系統初始化中','err');return;}
+  const phone=document.getElementById('l-phone').value.trim();
+  const pass=document.getElementById('l-pass').value;
+  const err=document.getElementById('l-err');
+  err.textContent='';
+  if(!phone||!pass){err.textContent='請填寫帳號與密碼';return;}
   try{
-    const snap = await GET(fbRef(`users/${phone}`));
-    if(!snap.exists()){ err.textContent='此帳號尚未註冊'; return; }
-    const data = snap.val();
-    if(data.pw !== pass){ err.textContent='密碼錯誤'; return; }
-    if(data.role !== selectedRole){ err.textContent=`身分不符（此帳號為 ${roleLabel(data.role)}）`; return; }
-    currentUser = { phone, name:data.name, role:data.role, pts:data.pts||0, type:data.type||'standard' };
+    const s=await GET(fb(`users/${phone}`));
+    if(!s.exists()){err.textContent='此帳號尚未註冊';return;}
+    const d=s.val();
+    if(d.pw!==pass){err.textContent='密碼錯誤';return;}
+    if(d.role!==currentRole){err.textContent=`身分不符（此帳號為 ${rlabel(d.role)}）`;return;}
+    CU={phone,name:d.name,role:d.role,pts:d.pts||0,type:d.type||'standard',ageGroup:d.ageGroup||null};
     document.getElementById('l-pass').value='';
     enterApp();
-  }catch(e){ err.textContent='連線錯誤，請稍後再試'; console.error(e); }
+  }catch(e){err.textContent='連線錯誤';console.error(e);}
 }
 
-function roleLabel(r){ return r==='student'?'學員':r==='coach'?'教練':'管理員'; }
+function rlabel(r){return r==='student'?'學員':r==='coach'?'教練':'管理員';}
 
 function enterApp(){
-  document.getElementById('login-screen').classList.remove('active');
-  if(currentUser.role==='student'){
-    document.getElementById('student-screen').classList.add('active');
-    document.getElementById('bottom-nav').classList.add('visible');
-    setupStudentUI();
+  if(CU.role==='student'){
+    // first time: no ageGroup → show onboard
+    if(!CU.ageGroup){
+      document.getElementById('scr-login').classList.remove('active');
+      document.getElementById('scr-onboard').classList.add('active');
+    } else {
+      goStudent();
+    }
+  } else if(CU.role==='coach'){
+    goCoach();
   } else {
-    document.getElementById('admin-screen').classList.add('active');
-    document.getElementById('a-role-lbl').textContent = roleLabel(currentUser.role);
-    setupAdminUI();
+    goAdmin();
   }
+}
+
+// ═══════════════════════════════════════════
+//  ONBOARDING
+// ═══════════════════════════════════════════
+function selAge(age,el){
+  selAge_=age;
+  document.querySelectorAll('.age-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+async function confirmAge(){
+  const err=document.getElementById('ob-err');
+  if(!selAge_){err.textContent='請選擇班別類型';return;}
+  await UPD(fb(`users/${CU.phone}`),{ageGroup:selAge_});
+  CU.ageGroup=selAge_;
+  goStudent();
+}
+
+// ═══════════════════════════════════════════
+//  SCREENS
+// ═══════════════════════════════════════════
+function goStudent(){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('scr-student').classList.add('active');
+  document.getElementById('bnav').classList.add('on');
+  setupStudent();
+}
+function goCoach(){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('scr-coach').classList.add('active');
+  setupCoach();
+}
+function goAdmin(){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('scr-admin').classList.add('active');
+  setupAdmin();
 }
 
 function doLogout(){
-  currentUser = null;
+  CU=null; selAge_=null;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('bottom-nav').classList.remove('visible');
-  document.getElementById('login-screen').classList.add('active');
-  // reset tabs
-  document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
-  document.getElementById('s-home').classList.add('active');
-  document.querySelectorAll('.nav-item').forEach((b,i)=>b.classList.toggle('active',i===0));
+  document.getElementById('bnav').classList.remove('on');
+  document.getElementById('scr-login').classList.add('active');
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.getElementById('s-home').classList.add('on');
+  document.querySelectorAll('.nitem').forEach((b,i)=>b.classList.toggle('on',i===0));
 }
 
 // ═══════════════════════════════════════════
-//  REGISTER (student only)
+//  STUDENT SETUP
 // ═══════════════════════════════════════════
-function openRegister(){ document.getElementById('reg-overlay').classList.add('open'); }
-function closeRegister(){ document.getElementById('reg-overlay').classList.remove('open'); }
-
-async function doRegister(){
-  if(!DB){ showToast('系統初始化中','err'); return; }
-  const name  = document.getElementById('r-name').value.trim();
-  const phone = document.getElementById('r-phone').value.trim();
-  const pass  = document.getElementById('r-pass').value;
-  const pass2 = document.getElementById('r-pass2').value;
-  const err   = document.getElementById('r-err');
-  err.textContent='';
-  if(!name||!phone||!pass){ err.textContent='請填寫所有欄位'; return; }
-  if(pass.length<6){ err.textContent='密碼至少需6位'; return; }
-  if(pass!==pass2){ err.textContent='兩次密碼不一致'; return; }
-  if(!/^09\d{8}$/.test(phone)){ err.textContent='請輸入正確手機號碼格式（09開頭10碼）'; return; }
-  try{
-    const snap = await GET(fbRef(`users/${phone}`));
-    if(snap.exists()){ err.textContent='此手機號碼已被使用'; return; }
-    // Always student — no way to self-register as coach/admin
-    await SET(fbRef(`users/${phone}`), {
-      name, pw:pass, role:'student', pts:0, type:'standard',
-      createdAt: Date.now()
-    });
-    showToast('✓ 註冊成功！請登入');
-    closeRegister();
-    document.getElementById('l-phone').value = phone;
-    document.getElementById('r-name').value='';
-    document.getElementById('r-phone').value='';
-    document.getElementById('r-pass').value='';
-    document.getElementById('r-pass2').value='';
-  }catch(e){ err.textContent='連線錯誤，請稍後再試'; console.error(e); }
-}
-
-// ═══════════════════════════════════════════
-//  ROLE MANAGEMENT OVERLAY (admin only)
-// ═══════════════════════════════════════════
-let allUsersCache = [];
-
-async function openRoleOverlay(){
-  // Load ALL users (not just students)
-  const snap = await GET(fbRef('users'));
-  if(!snap.exists()){ showToast('無法載入帳號','err'); return; }
-  const data = snap.val();
-  allUsersCache = Object.entries(data).map(([phone,v])=>({phone,...v}))
-    .sort((a,b)=>a.name.localeCompare(b.name,'zh'));
-
-  const sel = document.getElementById('rm-sel');
-  sel.innerHTML = allUsersCache.map(u=>`
-    <option value="${u.phone}">${u.name}（${u.phone}）· ${roleLabel(u.role)}</option>`).join('');
-
-  onRmSelChange(); // fill current info
-  document.getElementById('reg-overlay').classList.remove('open');
-  document.getElementById('role-overlay').classList.add('open');
-}
-
-function closeRoleOverlay(){ document.getElementById('role-overlay').classList.remove('open'); }
-
-function onRmSelChange(){
-  const phone = document.getElementById('rm-sel').value;
-  const u = allUsersCache.find(x=>x.phone===phone);
-  if(!u) return;
-  document.getElementById('rm-cur-role').textContent = roleLabel(u.role);
-  document.getElementById('rm-cur-type').textContent = u.type==='vip'?'⭐ 月費VIP':'一般';
-  document.getElementById('rm-cur-pts').textContent  = u.pts ?? 0;
-  document.getElementById('rm-role').value = u.role;
-  document.getElementById('rm-type').value = u.type||'standard';
-  document.getElementById('rm-pts').value  = '';
-  document.getElementById('rm-err').textContent = '';
-}
-
-async function confirmRoleChange(){
-  const phone   = document.getElementById('rm-sel').value;
-  const newRole = document.getElementById('rm-role').value;
-  const newType = document.getElementById('rm-type').value;
-  const ptsRaw  = document.getElementById('rm-pts').value.trim();
-  const err     = document.getElementById('rm-err');
-  err.textContent='';
-
-  // Prevent removing your own admin rights
-  if(phone === currentUser.phone && newRole !== 'admin'){
-    err.textContent='無法移除自己的管理員身分'; return;
-  }
-
-  const updates = { role: newRole, type: newType };
-  if(ptsRaw !== '') updates.pts = parseInt(ptsRaw)||0;
-
-  try{
-    await UPDATE(fbRef(`users/${phone}`), updates);
-    // update local cache
-    const u = allUsersCache.find(x=>x.phone===phone);
-    if(u){ u.role=newRole; u.type=newType; if(ptsRaw!=='') u.pts=updates.pts; }
-    // refresh selector
-    const sel = document.getElementById('rm-sel');
-    sel.innerHTML = allUsersCache.map(u=>`
-      <option value="${u.phone}">${u.name}（${u.phone}）· ${roleLabel(u.role)}</option>`).join('');
-    sel.value = phone;
-    onRmSelChange();
-    showToast(`✓ 已更新 ${allUsersCache.find(x=>x.phone===phone)?.name} 的身分`);
-    loadAdminMembers(); // refresh member list
-  }catch(e){ err.textContent='更新失敗，請重試'; console.error(e); }
-}
-
-function rmTab(tab, el){
-  document.querySelectorAll('#role-overlay .admin-tab').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('rm-edit').style.display = tab==='edit' ? 'block' : 'none';
-  document.getElementById('rm-new').style.display  = tab==='new'  ? 'block' : 'none';
-}
-
-async function createStaffAccount(){
-  const name  = document.getElementById('nc-name').value.trim();
-  const phone = document.getElementById('nc-phone').value.trim();
-  const pass  = document.getElementById('nc-pass').value;
-  const role  = document.getElementById('nc-role').value;
-  const err   = document.getElementById('nc-err');
-  err.textContent='';
-  if(!name||!phone||!pass){ err.textContent='請填寫所有欄位'; return; }
-  if(pass.length<6){ err.textContent='密碼至少需6位'; return; }
-  try{
-    const snap = await GET(fbRef(`users/${phone}`));
-    if(snap.exists()){ err.textContent='此帳號已存在'; return; }
-    await SET(fbRef(`users/${phone}`), {
-      name, pw:pass, role, pts:0, type:'standard', createdAt:Date.now()
-    });
-    showToast(`✓ 已建立 ${roleLabel(role)} 帳號：${name}`);
-    document.getElementById('nc-name').value='';
-    document.getElementById('nc-phone').value='';
-    document.getElementById('nc-pass').value='';
-    loadAdminMembers();
-  }catch(e){ err.textContent='建立失敗，請重試'; console.error(e); }
-}
-
-// ═══════════════════════════════════════════
-//  STUDENT UI
-// ═══════════════════════════════════════════
-function setupStudentUI(){
-  const u = currentUser;
-  document.getElementById('s-name').textContent = `Hi，${u.name} 👋`;
-  const av = u.name[0];
-  document.getElementById('s-av').textContent = av;
-  document.getElementById('s-av').className = 'topbar-avatar' + (u.type==='vip'?' pink':'');
-  document.getElementById('p-av').textContent = av;
-  document.getElementById('p-name').textContent = u.name;
-  document.getElementById('p-phone').textContent = u.phone;
-
+function setupStudent(){
+  const u=CU;
+  document.getElementById('s-greeting').textContent=`Hi，${u.name} 👋`;
+  const av=u.name[0];
+  document.getElementById('s-av').textContent=av;
+  document.getElementById('s-av').className='avatar '+(u.type==='vip'?'av-pink':'av-teal');
+  document.getElementById('p-av').textContent=av;
+  document.getElementById('p-name').textContent=u.name;
+  document.getElementById('p-phone').textContent=u.phone;
+  document.getElementById('p-type').textContent=u.type==='vip'?'⭐ 月費競技班 · VIP':u.ageGroup==='adult'?'成人學員':'青少年學員';
   if(u.type==='vip'){
-    document.getElementById('lc-type-badge').innerHTML='<span class="lc-type vip">⭐ 月費競技班 · VIP</span>';
-    document.getElementById('p-type-label').textContent='月費競技班 · VIP';
-    document.getElementById('vip-btn').style.display='flex';
+    document.getElementById('lc-badge-wrap').innerHTML='<span class="lc-badge lc-vip">⭐ 月費競技班</span>';
+    document.getElementById('vip-quick').style.display='flex';
   }
-
-  refreshStudentPts();
+  // default schedule filter to user's age group
+  schedFilter=u.ageGroup||'all';
+  refreshPts();
   loadTodayClasses();
-  buildDateStrip('s-date-strip');
+  buildDstrip('s-dstrip');
   loadCourts('s');
   loadHistory();
+  loadMyBookings();
+  buildSchedContent();
 }
 
-async function refreshStudentPts(){
-  const snap = await GET(fbRef(`users/${currentUser.phone}`));
-  if(!snap.exists()) return;
-  const d = snap.val();
-  currentUser.pts = d.pts||0;
-  document.getElementById('lc-pts').innerHTML = `${currentUser.pts} <span>/ 11 點</span>`;
-  renderStamps(currentUser.pts);
+async function refreshPts(){
+  const s=await GET(fb(`users/${CU.phone}`));
+  if(!s.exists()) return;
+  CU.pts=s.val().pts||0;
+  document.getElementById('lc-pts').innerHTML=`${CU.pts} <span>/ 11 點</span>`;
+  renderStamps(CU.pts);
 }
-
 function renderStamps(pts){
-  const grid = document.getElementById('stamps-grid');
-  grid.innerHTML='';
-  const used = Math.max(0, 11-pts);
+  const g=document.getElementById('stamps');
+  g.innerHTML='';
+  const used=Math.max(0,11-pts);
   for(let i=0;i<11;i++){
-    const d = document.createElement('div');
-    d.className = 'stamp'+(i<used?' used':'');
-    grid.appendChild(d);
+    const d=document.createElement('div');
+    d.className='stamp'+(i<used?' used':'');
+    g.appendChild(d);
   }
 }
 
 async function loadTodayClasses(){
-  const el = document.getElementById('today-classes');
-  const snap = await GET(fbRef(`schedule/${todayKey()}`));
-  if(!snap.exists()){ el.innerHTML='<div style="text-align:center;color:var(--gray);padding:16px;font-size:13px;">今日無課程</div>'; return; }
-  const data = snap.val();
-  el.innerHTML = Object.values(data).sort((a,b)=>a.time.localeCompare(b.time)).map(s=>`
-    <div class="sched-item">
-      <div class="sched-time">${s.time}</div>
-      <div class="sched-info"><div class="sched-name">${s.name}</div><div class="sched-coach">教練：${s.coach} · ${s.enrolled||0}/${s.seats}人</div></div>
-      <div class="badge ${s.type==='group'?'badge-group':s.type==='private'?'badge-private':'badge-duo'}">${s.type==='group'?'團':'個'}</div>
+  const el=document.getElementById('today-cls');
+  const s=await GET(fb(`schedule/${dayKey(new Date())}`));
+  if(!s.exists()){el.innerHTML='<div class="empty">今日無課程</div>';return;}
+  const items=Object.values(s.val()).sort((a,b)=>a.time.localeCompare(b.time));
+  el.innerHTML=items.map(c=>`
+    <div class="si">
+      <div class="si-time">${c.time}</div>
+      <div class="si-info"><div class="si-name">${c.name}</div><div class="si-sub">教練：${c.coach} · ${c.enrolled||0}/${c.seats}人</div></div>
+      <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':'個'}</div>
     </div>`).join('');
 }
 
 async function loadHistory(){
-  const el = document.getElementById('history-list');
-  const snap = await GET(fbRef(`history/${currentUser.phone}`));
-  if(!snap.exists()){ el.innerHTML='<div style="text-align:center;color:var(--gray);padding:16px;font-size:13px;">尚無紀錄</div>'; return; }
-  const items = Object.values(snap.val()).sort((a,b)=>b.ts-a.ts).slice(0,10);
-  el.innerHTML = items.map(h=>`
-    <div class="history-item">
-      <div><div class="h-type">${h.label}</div><div class="h-date">${fmtDate(h.ts)}</div></div>
-      <div class="h-pts ${h.delta<0?'minus':'plus'}">${h.delta>0?'+':''}${h.delta} pts</div>
+  const el=document.getElementById('history');
+  const s=await GET(fb(`history/${CU.phone}`));
+  if(!s.exists()){el.innerHTML='<div class="empty">尚無紀錄</div>';return;}
+  const items=Object.values(s.val()).sort((a,b)=>b.ts-a.ts).slice(0,10);
+  el.innerHTML=items.map(h=>`
+    <div class="hitem">
+      <div><div class="ht">${h.label}</div><div class="hd">${fmtDt(h.ts)}</div></div>
+      <div class="hpts ${h.delta<0?'m':'pl'}">${h.delta>0?'+':''}${h.delta}pts</div>
     </div>`).join('');
 }
 
-function fmtDate(ts){
-  const d=new Date(ts);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+// ── Schedule Content (with filter) ──
+function buildSchedContent(){
+  const f=schedFilter;
+  // set active filter tab
+  ['all','adult','youth','flex'].forEach(k=>{
+    document.getElementById('ft-'+k)?.classList.toggle('on',k===f);
+  });
+
+  const adultSched = [
+    {day:'週二 / 週四 / 週六', items:[{t:'19:00',n:'成人競技團班',s:'1.5hr · 最多5人',badge:'bg',btext:'團 −1pts'}]},
+  ];
+  const youthSched = [
+    {day:'週一 / 週三 / 週四 / 週五', items:[
+      {t:'13:30',n:'學生競技團班',s:'1.5hr · 最多5人',badge:'bg',btext:'團 −1pts'},
+      {t:'15:00',n:'學生競技團班',s:'1.5hr · 最多5人',badge:'bg',btext:'團 −1pts'},
+      {t:'16:30',n:'學生競技團班',s:'1.5hr · 最多5人',badge:'bg',btext:'團 −1pts'},
+      {t:'19:00',n:'學生競技團班',s:'1.5hr',badge:'bg',btext:'團 −1pts'},
+    ]},
+    {day:'週二', items:[
+      {t:'16:30',n:'學生競技團班',s:'1.5hr',badge:'bg',btext:'團 −1pts'},
+    ]},
+    {day:'週六', items:[
+      {t:'09:30',n:'學生競技團班',s:'1.5hr',badge:'bg',btext:'團 −1pts'},
+      {t:'14:00',n:'學生競技團班 A/B',s:'1.5hr · 超過5人自動分班',badge:'bg',btext:'團 −1pts'},
+      {t:'15:30',n:'學生競技團班',s:'1.5hr',badge:'bg',btext:'團 −1pts'},
+    ]},
+  ];
+  const flexSched = [
+    {day:'個人 / 雙人課（彈性預約）', items:[
+      {t:'彈性',n:'個人班',s:'1hr · 與教練預約',badge:'bp',btext:'個 −2pts'},
+      {t:'彈性',n:'雙人班',s:'1hr · 兩人各扣1點',badge:'bd',btext:'雙 各−1pts'},
+    ]},
+  ];
+
+  let sections=[];
+  if(f==='all'||f==='youth') sections=[...sections,...youthSched];
+  if(f==='all'||f==='adult') sections=[...sections,...adultSched];
+  if(f==='all'||f==='flex') sections=[...sections,...flexSched];
+
+  document.getElementById('sched-content').innerHTML=sections.map(sec=>`
+    <div class="card" style="margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:800;color:var(--gray);letter-spacing:1px;margin-bottom:12px;">${sec.day}</div>
+      ${sec.items.map(i=>`
+        <div class="si">
+          <div class="si-time">${i.t}</div>
+          <div class="si-info"><div class="si-name">${i.n}</div><div class="si-sub">${i.s}</div></div>
+          <div class="badge ${i.badge}">${i.btext}</div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function filterSched(f,el){
+  schedFilter=f;
+  buildSchedContent();
 }
 
 // ═══════════════════════════════════════════
 //  COURTS
 // ═══════════════════════════════════════════
-async function loadCourts(ctx){
-  const gridId = ctx==='s'?'courts-grid-s':ctx==='a'?'courts-grid-a':'courts-grid-admin';
-  const el = document.getElementById(gridId);
+function loadCourts(ctx){
+  const gridId=ctx==='s'?'cgrid-s':ctx==='a'?'cgrid-a':'cgrid-admin';
+  const el=document.getElementById(gridId);
   if(!el) return;
-  ONVALUE(fbRef('courts'), snap=>{
-    if(!snap.exists()){ el.innerHTML=''; return; }
-    const data = snap.val();
-    el.innerHTML = Object.entries(data).sort().map(([k,v])=>{
-      const num = k.replace('table','');
-      const avail = v.status==='available';
-      const onclick = avail && ctx==='s' ? `onclick="openBookModal(${num})"` : '';
-      return `<button class="court-btn ${avail?'available':'occupied'}" ${onclick} ${!avail&&ctx==='s'?'disabled':''}>
-        <span class="c-num">${num}</span>
-        <span class="c-label">${avail?'可預約':'佔用'}</span>
+  ONVAL(fb('courts'),snap=>{
+    if(!snap.exists()){el.innerHTML='';return;}
+    el.innerHTML=Object.entries(snap.val()).sort().map(([k,v])=>{
+      const num=k.replace('table','');
+      const avail=v.status==='available';
+      const click=avail&&ctx==='s'?`onclick="openBook(${num})"`:'';
+      const dis=!avail&&ctx==='s'?'disabled':'';
+      return `<button class="cbtn ${avail?'avail':'occ'}" ${click} ${dis}>
+        <span class="cn">${num}</span><span class="cl">${avail?'可預約':'佔用'}</span>
       </button>`;
     }).join('');
   });
@@ -1130,336 +1029,563 @@ async function loadCourts(ctx){
 // ═══════════════════════════════════════════
 //  BOOKING
 // ═══════════════════════════════════════════
-function openBookModal(n){
-  bookingTableNum = n;
-  document.getElementById('book-t-num').textContent = n;
+function openBook(n){
+  bookTbl=n;
+  document.getElementById('book-tnum').textContent=n;
   document.getElementById('book-err').textContent='';
-  document.getElementById('book-modal').classList.add('open');
+  document.getElementById('book-modal').classList.add('on');
 }
 
-async function confirmBooking(){
-  const type = document.getElementById('book-type').value;
-  const slot = document.getElementById('book-slot').value;
-  const err  = document.getElementById('book-err');
-  const pts  = type==='private'?2:type==='group'||type==='duo'?1:0;
-  if(pts>0 && currentUser.pts<pts){ err.textContent=`點數不足（需 ${pts} 點，剩餘 ${currentUser.pts} 點）`; return; }
-
+async function confirmBook(){
+  const type=document.getElementById('book-type').value;
+  const slot=document.getElementById('book-slot').value;
+  const err=document.getElementById('book-err');
+  const pts=type==='private'?2:type==='group'||type==='duo'?1:0;
+  if(pts>0&&CU.pts<pts){err.textContent=`點數不足（需${pts}點，剩${CU.pts}點）`;return;}
   try{
-    const newPts = currentUser.pts - pts;
-    // update user pts
+    const newPts=CU.pts-pts;
     if(pts>0){
-      await UPDATE(fbRef(`users/${currentUser.phone}`),{pts:newPts});
-      // log history
-      await PUSH(fbRef(`history/${currentUser.phone}`),{
-        label:`預約桌${bookingTableNum} ${slot}`,
-        delta:-pts, ts:Date.now()
-      });
+      await UPD(fb(`users/${CU.phone}`),{pts:newPts});
+      await PUSH(fb(`history/${CU.phone}`),{label:`預約桌${bookTbl} ${slot}`,delta:-pts,ts:Date.now()});
     }
-    // write booking
-    const bKey = `${todayKey()}_t${bookingTableNum}_${Date.now()}`;
-    await SET(fbRef(`bookings/${bKey}`),{
-      user:currentUser.phone, name:currentUser.name,
-      table:bookingTableNum, slot, type, pts, ts:Date.now()
-    });
-    // update court
-    await UPDATE(fbRef(`courts/table${bookingTableNum}`),{status:'occupied'});
-
-    currentUser.pts = newPts;
+    const bkey=`${dayKey(new Date())}_t${bookTbl}_${Date.now()}`;
+    await SET(fb(`bookings/${bkey}`),{user:CU.phone,name:CU.name,table:bookTbl,slot,type,pts,ts:Date.now()});
+    await UPD(fb(`courts/table${bookTbl}`),{status:'occupied'});
+    CU.pts=newPts;
     document.getElementById('lc-pts').innerHTML=`${newPts} <span>/ 11 點</span>`;
     renderStamps(newPts);
     closeModal('book-modal');
-    showToast(`✓ 已預約桌 ${bookingTableNum}，扣 ${pts} 點`);
+    showToast(`✓ 已預約桌${bookTbl}，扣${pts}點`);
     loadMyBookings();
-  }catch(e){ err.textContent='預約失敗，請重試'; console.error(e); }
+  }catch(e){err.textContent='預約失敗';console.error(e);}
 }
 
 async function loadMyBookings(){
-  const el = document.getElementById('my-bookings');
-  const snap = await GET(fbRef('bookings'));
-  if(!snap.exists()){ el.innerHTML='<div style="text-align:center;color:var(--gray);padding:16px;font-size:13px;">尚無預約紀錄</div>'; return; }
-  const mine = Object.values(snap.val()).filter(b=>b.user===currentUser.phone).sort((a,b)=>b.ts-a.ts).slice(0,5);
-  if(!mine.length){ el.innerHTML='<div style="text-align:center;color:var(--gray);padding:16px;font-size:13px;">尚無預約紀錄</div>'; return; }
-  el.innerHTML = mine.map(b=>`
-    <div class="sched-item">
-      <div class="sched-time">桌 ${b.table}</div>
-      <div class="sched-info"><div class="sched-name">${b.slot}</div><div class="sched-coach">${fmtDate(b.ts)}</div></div>
-      <div style="color:var(--teal);font-size:18px;font-weight:900;">✓</div>
+  const el=document.getElementById('my-bookings');
+  if(!el) return;
+  const s=await GET(fb('bookings'));
+  if(!s.exists()){el.innerHTML='<div class="empty">尚無預約紀錄</div>';return;}
+  const mine=Object.entries(s.val()).filter(([,b])=>b.user===CU.phone).sort(([,a],[,b])=>b.ts-a.ts).slice(0,5);
+  if(!mine.length){el.innerHTML='<div class="empty">尚無預約紀錄</div>';return;}
+  el.innerHTML=mine.map(([key,b])=>`
+    <div class="bitem">
+      <div class="bi-info">
+        <div class="bi-name">桌 ${b.table} · ${b.slot}</div>
+        <div class="bi-sub">${fmtDt(b.ts)}</div>
+      </div>
+      <button class="cancel-btn" onclick="openCancel('${key}',${b.pts||0},${b.table})">取消</button>
     </div>`).join('');
 }
 
+// ── Cancel ──
+function openCancel(key,pts,tbl){
+  cancelKey_=key; cancelPts_=pts; cancelTbl_=tbl;
+  document.getElementById('cancel-info').textContent=`桌 ${tbl} 的預約`;
+  document.getElementById('cancel-modal').classList.add('on');
+}
+
+async function confirmCancel(){
+  if(!cancelKey_) return;
+  try{
+    // restore points
+    if(cancelPts_>0){
+      const newPts=CU.pts+cancelPts_;
+      await UPD(fb(`users/${CU.phone}`),{pts:newPts});
+      await PUSH(fb(`history/${CU.phone}`),{label:`取消預約桌${cancelTbl_}（退點）`,delta:cancelPts_,ts:Date.now()});
+      CU.pts=newPts;
+      document.getElementById('lc-pts').innerHTML=`${newPts} <span>/ 11 點</span>`;
+      renderStamps(newPts);
+    }
+    // remove booking
+    await REMOVE(fb(`bookings/${cancelKey_}`));
+    // free court
+    await UPD(fb(`courts/table${cancelTbl_}`),{status:'available'});
+    closeModal('cancel-modal');
+    showToast(`✓ 已取消預約，退回 ${cancelPts_} 點`);
+    loadMyBookings();
+  }catch(e){showToast('取消失敗','err');console.error(e);}
+}
+
 // ═══════════════════════════════════════════
-//  ADMIN UI
+//  COACH SETUP
 // ═══════════════════════════════════════════
-async function setupAdminUI(){
+async function setupCoach(){
+  document.getElementById('co-name').textContent=`Hi，${CU.name} 👋`;
+  buildDstrip('co-dstrip');
+  await loadCoachHours();
+  await loadCoachSchedule();
+}
+
+async function loadCoachHours(){
+  const s=await GET(fb(`coachHours/${CU.phone}`));
+  const data=s.exists()?s.val():{};
+  const now=new Date();
+  const monthKey=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  const weekH=data.weekHours||0;
+  const monthH=data[monthKey]||0;
+  document.getElementById('co-hrs').innerHTML=`${monthH} <span>hrs</span>`;
+
+  // calc salary preview
+  const rs=await GET(fb(`coachRates/${CU.phone}`));
+  const rate=rs.exists()?rs.val().hourlyRate:0;
+  const salary=monthH*rate;
+  document.getElementById('co-hrs-sub').textContent=`本週：${weekH} hrs · 本月試算薪資：$${salary.toLocaleString()}`;
+}
+
+async function loadCoachSchedule(){
+  const el=document.getElementById('co-schedule');
+  // Load all schedules for this week
+  const days=[];
+  const now=new Date();
+  for(let i=0;i<7;i++){const d=new Date(now);d.setDate(now.getDate()+i);days.push(dayKey(d));}
+  let allItems=[];
+  for(const k of days){
+    const s=await GET(fb(`schedule/${k}`));
+    if(!s.exists()) continue;
+    Object.values(s.val()).forEach(item=>{
+      if(item.coach===CU.name) allItems.push({...item,dateKey:k});
+    });
+  }
+  if(!allItems.length){el.innerHTML='<div class="empty">本週尚無排課</div>';return;}
+  allItems.sort((a,b)=>a.dateKey.localeCompare(b.dateKey)||a.time.localeCompare(b.time));
+  el.innerHTML=allItems.map(c=>`
+    <div class="si">
+      <div class="si-time">${fmtDay(c.dateKey)}<br>${c.time}</div>
+      <div class="si-info"><div class="si-name">${c.name}</div><div class="si-sub">${c.coach} · 桌${c.table||'—'}</div></div>
+      <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':'個'}</div>
+    </div>`).join('');
+}
+
+function openAddClass(){
+  // set default date to today
+  document.getElementById('ac-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('ac-err').textContent='';
+  document.getElementById('add-class-modal').classList.add('on');
+}
+
+async function confirmAddClass(){
+  const type=document.getElementById('ac-type').value;
+  const student=document.getElementById('ac-student').value.trim();
+  const date=document.getElementById('ac-date').value;
+  const time=document.getElementById('ac-time').value;
+  const table=document.getElementById('ac-table').value;
+  const err=document.getElementById('ac-err');
+  if(!student||!date){err.textContent='請填寫學員姓名與日期';return;}
+  const dateKey=date.replace(/-/g,'');
+  try{
+    const key=`${dateKey}_${Date.now()}`;
+    await SET(fb(`schedule/${dateKey}/${key}`),{
+      time, name:`${type==='private'?'個人班':'雙人班'} · ${student}`,
+      coach:CU.name, type, ageGroup:'flex', seats:1, enrolled:1, table:parseInt(table)
+    });
+    // add coach hours: 1hr per session
+    const monthKey=`${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}`;
+    const hs=await GET(fb(`coachHours/${CU.phone}`));
+    const hd=hs.exists()?hs.val():{};
+    const cur=hd[monthKey]||0;
+    await UPD(fb(`coachHours/${CU.phone}`),{[monthKey]:cur+1,weekHours:(hd.weekHours||0)+1});
+    closeModal('add-class-modal');
+    showToast('✓ 課程已新增');
+    loadCoachSchedule();
+    loadCoachHours();
+  }catch(e){err.textContent='新增失敗';console.error(e);}
+}
+
+// ═══════════════════════════════════════════
+//  ADMIN SETUP
+// ═══════════════════════════════════════════
+async function setupAdmin(){
   loadCourts('a');
-  loadCourts('admin-courts');
+  loadCourts('admin');
   loadAdminMembers();
   loadAdminBookings();
   loadTodayAdmin();
-  buildDateStrip('');
+  loadCoachCards();
+  loadRateList();
 }
 
 async function loadAdminMembers(){
-  const snap = await GET(fbRef('users'));
-  const el = document.getElementById('member-list');
-  if(!snap.exists()){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--gray);">尚無學員</div>'; return; }
-  const data = snap.val();
-  allMembers = Object.entries(data).filter(([,v])=>v.role==='student').map(([phone,v])=>({phone,...v}));
-  // stats
-  document.getElementById('stat-members').textContent = allMembers.length;
-  document.getElementById('stat-vip').textContent = allMembers.filter(m=>m.type==='vip').length;
-  renderMemberList(allMembers);
-  // populate deduct select
-  const sel = document.getElementById('deduct-member-sel');
-  sel.innerHTML = allMembers.map(m=>`<option value="${m.phone}">${m.name}（${m.phone}）· ${m.pts}pts</option>`).join('');
+  const s=await GET(fb('users'));
+  if(!s.exists()) return;
+  const data=s.val();
+  allMembers=Object.entries(data).filter(([,v])=>v.role==='student').map(([phone,v])=>({phone,...v}));
+  document.getElementById('st-members').textContent=allMembers.length;
+  document.getElementById('st-vip').textContent=allMembers.filter(m=>m.type==='vip').length;
+  renderMlist(allMembers);
+  // deduct select
+  const sel=document.getElementById('d-sel');
+  sel.innerHTML=allMembers.map(m=>`<option value="${m.phone}">${m.name}（${m.phone}）· ${m.pts}pts</option>`).join('');
 }
 
-function renderMemberList(members){
-  const el = document.getElementById('member-list');
-  if(!members.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--gray);">無符合學員</div>'; return; }
-  el.innerHTML = members.map(m=>`
-    <div class="member-item" onclick="quickDeduct('${m.phone}')">
-      <div class="member-av ${m.type==='vip'?'pink':''}">${m.name[0]}</div>
-      <div class="member-info">
-        <div class="member-name">${m.name}${m.type==='vip'?'<span class="vip-tag">月費VIP</span>':''}</div>
-        <div class="member-phone">${m.phone}</div>
+function renderMlist(members){
+  const el=document.getElementById('mlist');
+  if(!members.length){el.innerHTML='<div class="empty">無符合學員</div>';return;}
+  el.innerHTML=members.map(m=>`
+    <div class="mitem" onclick="quickDeduct('${m.phone}')">
+      <div class="mav ${m.type==='vip'?'p':''}">${m.name[0]}</div>
+      <div class="minfo">
+        <div class="mname">${m.name}${m.type==='vip'?'<span class="viptag">月費VIP</span>':''}
+          ${m.ageGroup?`<span class="agetag">${m.ageGroup==='adult'?'成人':'青少年'}</span>`:''}
+        </div>
+        <div class="mphone">${m.phone}</div>
       </div>
-      <div class="member-pts ${m.pts<=2?'low':''}">${m.type==='vip'?'月費':m.pts+' pts'}</div>
+      <div class="mpts ${m.pts<=2?'lo':''}">${m.type==='vip'?'月費':m.pts+' pts'}</div>
     </div>`).join('');
 }
 
 function filterMembers(){
-  const q = document.getElementById('member-search').value.toLowerCase();
-  const filtered = allMembers.filter(m=>m.name.includes(q)||m.phone.includes(q));
-  renderMemberList(filtered);
+  const q=document.getElementById('msearch').value.toLowerCase();
+  renderMlist(allMembers.filter(m=>m.name.includes(q)||m.phone.includes(q)));
 }
 
 async function loadAdminBookings(){
-  const el = document.getElementById('a-bookings');
+  const el=document.getElementById('a-bookings');
   if(!el) return;
-  const snap = await GET(fbRef('bookings'));
-  if(!snap.exists()){ el.innerHTML='<div style="text-align:center;color:var(--gray);padding:16px;font-size:13px;">今日尚無預約</div>'; return; }
-  const items = Object.values(snap.val()).filter(b=>{
+  const s=await GET(fb('bookings'));
+  if(!s.exists()){el.innerHTML='<div class="empty">今日尚無預約</div>';return;}
+  const todayItems=Object.values(s.val()).filter(b=>{
     const d=new Date(b.ts);
-    return fmtDate(b.ts).startsWith(todayKey().slice(0,4)+'-'+todayKey().slice(4,6)+'-'+todayKey().slice(6,8));
+    return dayKey(d)===dayKey(new Date());
   }).sort((a,b)=>b.ts-a.ts);
-  if(!items.length){ el.innerHTML='<div style="text-align:center;color:var(--gray);padding:16px;font-size:13px;">今日尚無預約</div>'; return; }
-  el.innerHTML = items.map(b=>`
-    <div class="member-item">
-      <div class="member-av">${b.name[0]}</div>
-      <div class="member-info"><div class="member-name">${b.name}</div><div class="member-phone">桌 ${b.table} · ${b.slot}</div></div>
+  if(!todayItems.length){el.innerHTML='<div class="empty">今日尚無預約</div>';return;}
+  el.innerHTML=todayItems.map(b=>`
+    <div class="mitem">
+      <div class="mav">${b.name[0]}</div>
+      <div class="minfo"><div class="mname">${b.name}</div><div class="mphone">桌${b.table} · ${b.slot}</div></div>
       <div style="color:var(--teal);font-size:13px;font-weight:700;">確認</div>
     </div>`).join('');
 }
 
 async function loadTodayAdmin(){
-  const el = document.getElementById('a-today');
-  if(!el) return;
-  const snap = await GET(fbRef(`schedule/${todayKey()}`));
-  if(!snap.exists()){ el.innerHTML='<div style="text-align:center;color:var(--gray);padding:16px;font-size:13px;">今日無排課</div>'; return; }
-  const data = snap.val();
-  el.innerHTML = Object.values(data).sort((a,b)=>a.time.localeCompare(b.time)).map(s=>`
-    <div class="sched-item">
-      <div class="sched-time">${s.time}</div>
-      <div class="sched-info"><div class="sched-name">${s.name}</div><div class="sched-coach">${s.coach} · ${s.enrolled||0}/${s.seats}人</div></div>
-      <div class="badge ${s.type==='group'?'badge-group':'badge-private'}">${s.enrolled||0}/${s.seats}</div>
+  const el=document.getElementById('a-today');
+  const s=await GET(fb(`schedule/${dayKey(new Date())}`));
+  if(!s.exists()){el.innerHTML='<div class="empty">今日無排課</div>';return;}
+  el.innerHTML=Object.values(s.val()).sort((a,b)=>a.time.localeCompare(b.time)).map(c=>`
+    <div class="si">
+      <div class="si-time">${c.time}</div>
+      <div class="si-info"><div class="si-name">${c.name}</div><div class="si-sub">${c.coach} · ${c.enrolled||0}/${c.seats}人</div></div>
+      <div class="badge ${c.type==='group'?'bg':'bp'}">${c.enrolled||0}/${c.seats}</div>
     </div>`).join('');
+}
+
+// ── Coach Cards (admin view) ──
+async function loadCoachCards(){
+  const el=document.getElementById('coach-cards');
+  const us=await GET(fb('users'));
+  if(!us.exists()){el.innerHTML='';return;}
+  const coaches=Object.entries(us.val()).filter(([,v])=>v.role==='coach');
+  if(!coaches.length){el.innerHTML='<div class="empty">尚無教練帳號</div>';return;}
+  const now=new Date();
+  const mk=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  let html='';
+  for(const [phone,c] of coaches){
+    const hs=await GET(fb(`coachHours/${phone}`));
+    const hd=hs.exists()?hs.val():{};
+    const mh=hd[mk]||0;
+    const maxH=40;
+    const pct=Math.min(100,Math.round(mh/maxH*100));
+    html+=`<div class="coach-card">
+      <div class="cav">🧑‍🏫</div>
+      <div class="cinfo">
+        <div class="cname">${c.name}</div>
+        <div class="chours">本月 ${mh}hrs · 本週 ${hd.weekHours||0}hrs</div>
+        <div class="cbar-w"><div class="cbar" style="width:${pct}%"></div></div>
+      </div>
+      <div class="chbig">${mh}h</div>
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+
+// ── Hourly Rate ──
+async function loadRateList(){
+  const el=document.getElementById('rate-list');
+  const us=await GET(fb('users'));
+  if(!us.exists()){el.innerHTML='<div class="empty">尚無教練</div>';return;}
+  const coaches=Object.entries(us.val()).filter(([,v])=>v.role==='coach');
+  if(!coaches.length){el.innerHTML='<div class="empty">尚無教練帳號</div>';return;}
+  let html='';
+  for(const [phone,c] of coaches){
+    const rs=await GET(fb(`coachRates/${phone}`));
+    const rate=rs.exists()?(rs.val().hourlyRate||0):0;
+    html+=`<div class="rate-item">
+      <div class="rate-left"><div class="rn">${c.name}</div><div class="rs">${phone}</div></div>
+      <input class="rate-input" type="number" id="rate-${phone}" value="${rate}" placeholder="時薪" min="0">
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+
+async function saveRates(){
+  const us=await GET(fb('users'));
+  if(!us.exists()) return;
+  const coaches=Object.entries(us.val()).filter(([,v])=>v.role==='coach');
+  for(const [phone] of coaches){
+    const inp=document.getElementById(`rate-${phone}`);
+    if(inp){
+      const val=parseInt(inp.value)||0;
+      await SET(fb(`coachRates/${phone}`),{hourlyRate:val});
+    }
+  }
+  showToast('✓ 時薪已儲存');
+}
+
+// ── Salary Calculation ──
+async function calcSalary(){
+  const el=document.getElementById('salary-list');
+  el.innerHTML='<div class="loading"><div class="spinner"></div>計算中</div>';
+  const us=await GET(fb('users'));
+  if(!us.exists()){el.innerHTML='<div class="empty">尚無教練</div>';return;}
+  const coaches=Object.entries(us.val()).filter(([,v])=>v.role==='coach');
+  const now=new Date();
+  const mk=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  let totalSalary=0;
+  let html='';
+  for(const [phone,c] of coaches){
+    const hs=await GET(fb(`coachHours/${phone}`));
+    const mh=(hs.exists()?hs.val()[mk]:0)||0;
+    const rs=await GET(fb(`coachRates/${phone}`));
+    const rate=rs.exists()?(rs.val().hourlyRate||0):0;
+    const salary=mh*rate;
+    totalSalary+=salary;
+    html+=`<div class="salary-row">
+      <div class="sr-left">
+        <div class="sr-name">${c.name}</div>
+        <div class="sr-detail">${mh} hrs × $${rate}/hr</div>
+      </div>
+      <div class="sr-amt">$${salary.toLocaleString()}</div>
+    </div>`;
+  }
+  html+=`<div class="salary-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:14px;">
+    <div class="sr-left"><div class="sr-name" style="font-size:15px;">本月薪資總計</div></div>
+    <div class="sr-amt" style="font-size:20px;color:var(--pink);">$${totalSalary.toLocaleString()}</div>
+  </div>`;
+  el.innerHTML=html;
 }
 
 // ═══════════════════════════════════════════
 //  DEDUCT
 // ═══════════════════════════════════════════
-function openDeductModal(){
-  if(!allMembers.length){ showToast('請先載入學員資料','err'); return; }
-  document.getElementById('deduct-modal').classList.add('open');
-  updateDeductPreview();
+let dAmt=1;
+function openDeduct(){
+  if(!allMembers.length){showToast('請先載入學員','err');return;}
+  dAmt=1;
+  document.querySelectorAll('.ctbtn').forEach((b,i)=>b.classList.toggle('on',i===0));
+  document.getElementById('dp-num').textContent='−1';
+  updDeductPrev();
+  document.getElementById('deduct-modal').classList.add('on');
 }
-
 function quickDeduct(phone){
-  const sel = document.getElementById('deduct-member-sel');
-  sel.value = phone;
-  openDeductModal();
+  document.getElementById('d-sel').value=phone;
+  openDeduct();
 }
-
-function selClass(el, pts){
-  document.querySelectorAll('.class-type-btn').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  deductAmt = pts;
-  updateDeductPreview();
+function selCt(el,pts){
+  document.querySelectorAll('.ctbtn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  dAmt=pts;
+  document.getElementById('dp-num').textContent='−'+pts;
+  updDeductPrev();
 }
-
-function updateDeductPreview(){
-  document.getElementById('d-pts-preview').textContent = '−'+deductAmt;
-  const phone = document.getElementById('deduct-member-sel').value;
-  const m = allMembers.find(x=>x.phone===phone);
-  if(m) document.getElementById('d-remain-label').textContent = `剩餘：${m.pts} → ${Math.max(0,m.pts-deductAmt)} 點`;
+function updDeductPrev(){
+  const phone=document.getElementById('d-sel').value;
+  const m=allMembers.find(x=>x.phone===phone);
+  if(m) document.getElementById('dp-rem').textContent=`剩餘：${m.pts} → ${Math.max(0,m.pts-dAmt)} 點`;
 }
-
 async function confirmDeduct(){
-  const phone = document.getElementById('deduct-member-sel').value;
-  const m = allMembers.find(x=>x.phone===phone);
-  if(!m){ showToast('找不到學員','err'); return; }
-  const typeLabels = ['','團體班','個人班','雙人班'];
-  const newPts = Math.max(0, m.pts - deductAmt);
+  const phone=document.getElementById('d-sel').value;
+  const m=allMembers.find(x=>x.phone===phone);
+  if(!m){showToast('找不到學員','err');return;}
+  const newPts=Math.max(0,m.pts-dAmt);
   try{
-    await UPDATE(fbRef(`users/${phone}`),{pts:newPts});
-    await PUSH(fbRef(`history/${phone}`),{
-      label: deductAmt===1?'團體/雙人班':'個人班',
-      delta:-deductAmt, ts:Date.now()
-    });
-    m.pts = newPts;
+    await UPD(fb(`users/${phone}`),{pts:newPts});
+    await PUSH(fb(`history/${phone}`),{label:dAmt===1?'團體/雙人班':'個人班',delta:-dAmt,ts:Date.now()});
+    m.pts=newPts;
     closeModal('deduct-modal');
-    showToast(`✓ ${m.name} 扣 ${deductAmt} 點，剩 ${newPts} 點`);
-    renderMemberList(allMembers);
-    const sel = document.getElementById('deduct-member-sel');
-    sel.innerHTML = allMembers.map(x=>`<option value="${x.phone}">${x.name}（${x.phone}）· ${x.pts}pts</option>`).join('');
-  }catch(e){ showToast('扣點失敗','err'); console.error(e); }
+    showToast(`✓ ${m.name} 扣${dAmt}點，剩${newPts}點`);
+    renderMlist(allMembers);
+    const sel=document.getElementById('d-sel');
+    sel.innerHTML=allMembers.map(x=>`<option value="${x.phone}">${x.name}（${x.phone}）· ${x.pts}pts</option>`).join('');
+  }catch(e){showToast('扣點失敗','err');console.error(e);}
+}
+
+// ═══════════════════════════════════════════
+//  ROLE MANAGEMENT
+// ═══════════════════════════════════════════
+function openRoleOvl(){
+  if(CU.role!=='admin'){showToast('僅管理員可使用','err');return;}
+  document.getElementById('ovl-role').classList.add('on');
+  loadRmSel();
+}
+function rmTab(id,el){
+  document.getElementById('rm-edit').style.display=id==='edit'?'block':'none';
+  document.getElementById('rm-new').style.display=id==='new'?'block':'none';
+  document.querySelectorAll('#ovl-role .ftab').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+}
+async function loadRmSel(){
+  const s=await GET(fb('users'));
+  if(!s.exists()) return;
+  const sel=document.getElementById('rm-sel');
+  sel.innerHTML=Object.entries(s.val()).filter(([p])=>p!=='000000')
+    .map(([p,v])=>`<option value="${p}">${v.name}（${p}）· ${rlabel(v.role)}</option>`).join('');
+  onRmSel();
+}
+async function onRmSel(){
+  const phone=document.getElementById('rm-sel').value;
+  if(!phone) return;
+  const s=await GET(fb(`users/${phone}`));
+  if(!s.exists()) return;
+  const d=s.val();
+  document.getElementById('rm-cr').textContent=rlabel(d.role);
+  document.getElementById('rm-ct').textContent=d.type==='vip'?'⭐ 月費VIP':'一般';
+  document.getElementById('rm-cp').textContent=d.pts+'點';
+  document.getElementById('rm-role').value=d.role;
+  document.getElementById('rm-type').value=d.type||'standard';
+  document.getElementById('rm-pts').value='';
+}
+async function confirmRoleChange(){
+  const phone=document.getElementById('rm-sel').value;
+  const role=document.getElementById('rm-role').value;
+  const type=document.getElementById('rm-type').value;
+  const ptsRaw=document.getElementById('rm-pts').value;
+  const err=document.getElementById('rm-err');
+  err.textContent='';
+  if(!phone){err.textContent='請選擇帳號';return;}
+  try{
+    const upd={role,type};
+    if(ptsRaw!=='') upd.pts=parseInt(ptsRaw)||0;
+    await UPD(fb(`users/${phone}`),upd);
+    showToast('✓ 帳號已更新');
+    onRmSel();
+    loadAdminMembers();
+  }catch(e){err.textContent='更新失敗';console.error(e);}
+}
+async function createStaff(){
+  const name=document.getElementById('nc-name').value.trim();
+  const phone=document.getElementById('nc-phone').value.trim();
+  const pass=document.getElementById('nc-pass').value;
+  const role=document.getElementById('nc-role').value;
+  const err=document.getElementById('nc-err');
+  err.textContent='';
+  if(!name||!phone||!pass){err.textContent='請填寫所有欄位';return;}
+  if(pass.length<6){err.textContent='密碼至少6位';return;}
+  try{
+    const s=await GET(fb(`users/${phone}`));
+    if(s.exists()){err.textContent='此號碼已有帳號';return;}
+    await SET(fb(`users/${phone}`),{name,pw:pass,role,pts:0,type:'standard',createdAt:Date.now()});
+    showToast(`✓ ${rlabel(role)} ${name} 已建立`);
+    document.getElementById('nc-name').value='';
+    document.getElementById('nc-phone').value='';
+    document.getElementById('nc-pass').value='';
+    loadRmSel();
+    loadCoachCards();
+    loadRateList();
+  }catch(e){err.textContent='建立失敗';console.error(e);}
+}
+
+// ═══════════════════════════════════════════
+//  REGISTER
+// ═══════════════════════════════════════════
+function openReg(){document.getElementById('ovl-reg').classList.add('on');}
+async function doRegister(){
+  if(!DB){showToast('系統初始化中','err');return;}
+  const name=document.getElementById('r-name').value.trim();
+  const phone=document.getElementById('r-phone').value.trim();
+  const pass=document.getElementById('r-pass').value;
+  const pass2=document.getElementById('r-pass2').value;
+  const err=document.getElementById('r-err');
+  err.textContent='';
+  if(!name||!phone||!pass){err.textContent='請填寫所有欄位';return;}
+  if(pass.length<6){err.textContent='密碼至少6位';return;}
+  if(pass!==pass2){err.textContent='兩次密碼不一致';return;}
+  if(!/^09\d{8}$/.test(phone)){err.textContent='請輸入正確手機格式';return;}
+  try{
+    const s=await GET(fb(`users/${phone}`));
+    if(s.exists()){err.textContent='此號碼已註冊';return;}
+    await SET(fb(`users/${phone}`),{name,pw:pass,role:'student',pts:0,type:'standard',createdAt:Date.now()});
+    showToast('✓ 註冊成功，請登入');
+    closeOvl('ovl-reg');
+    document.getElementById('l-phone').value=phone;
+  }catch(e){err.textContent='連線錯誤';console.error(e);}
 }
 
 // ═══════════════════════════════════════════
 //  NAV & TABS
 // ═══════════════════════════════════════════
-const navMap = {'s-home':'nav-home','s-book':'nav-book','s-schedule':'nav-sched','s-profile':'nav-prof','s-vip':'nav-prof'};
+const navmap={'s-home':'n-home','s-book':'n-book','s-schedule':'n-sched','s-profile':'n-prof','s-vip':'n-prof'};
 
-function sShowTab(id){
-  document.querySelectorAll('.page-section').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
-  const navId = navMap[id];
-  if(navId) document.getElementById(navId).classList.add('active');
-  if(id==='s-book'){ loadCourts('s'); loadMyBookings(); }
-  if(id==='s-profile'){ refreshStudentPts(); loadHistory(); }
+function sTab(id){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  document.querySelectorAll('.nitem').forEach(b=>b.classList.remove('on'));
+  const nid=navmap[id];
+  if(nid) document.getElementById(nid).classList.add('on');
+  if(id==='s-book'){loadCourts('s');loadMyBookings();}
+  if(id==='s-profile'){refreshPts();loadHistory();}
+  if(id==='s-schedule'){buildSchedContent();}
 }
 
-function aTab(id, el){
-  document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('active'));
-  document.getElementById('at-'+id).classList.add('active');
-  document.querySelectorAll('.admin-tab').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
+function aTab(id,el){
+  document.querySelectorAll('.asec').forEach(s=>s.classList.remove('on'));
+  document.getElementById('at-'+id).classList.add('on');
+  document.querySelectorAll('.atab').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
   if(id==='members') loadAdminMembers();
-  if(id==='courts'){ loadCourts('admin-courts'); loadAdminBookings(); }
+  if(id==='courts'){loadCourts('admin');loadAdminBookings();}
+  if(id==='coaches'){loadCoachCards();loadRateList();}
 }
 
 // ═══════════════════════════════════════════
-//  DATE STRIP
+//  UTILS
 // ═══════════════════════════════════════════
-function buildDateStrip(id){
-  const ids = id ? [id] : ['s-date-strip'];
-  const days=['日','一','二','三','四','五','六'];
-  ids.forEach(sid=>{
-    const el=document.getElementById(sid);
-    if(!el) return;
-    el.innerHTML='';
-    const now=new Date();
-    for(let i=0;i<7;i++){
-      const d=new Date(now); d.setDate(now.getDate()+i);
-      const chip=document.createElement('button');
-      chip.className='date-chip'+(i===0?' active':'');
-      chip.innerHTML=`<span class="d-day">週${days[d.getDay()]}</span><span class="d-num">${d.getDate()}</span>`;
-      chip.onclick=()=>{ el.querySelectorAll('.date-chip').forEach(c=>c.classList.remove('active')); chip.classList.add('active'); };
-      el.appendChild(chip);
-    }
-  });
+function dayKey(d){return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;}
+function fmtDt(ts){const d=new Date(ts);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
+const dnames=['日','一','二','三','四','五','六'];
+function fmtDay(k){const d=new Date(`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`);return `週${dnames[d.getDay()]}`;}
+
+function buildDstrip(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.innerHTML='';
+  const now=new Date();
+  for(let i=0;i<7;i++){
+    const d=new Date(now);d.setDate(now.getDate()+i);
+    const chip=document.createElement('button');
+    chip.className='dchip'+(i===0?' on':'');
+    chip.innerHTML=`<span class="dd">週${dnames[d.getDay()]}</span><span class="dn">${d.getDate()}</span>`;
+    chip.onclick=()=>{el.querySelectorAll('.dchip').forEach(c=>c.classList.remove('on'));chip.classList.add('on');
+      if(id==='co-dstrip') loadCoachDaySchedule(dayKey(d));
+    };
+    el.appendChild(chip);
+  }
 }
 
-// ═══════════════════════════════════════════
-//  MODAL / TOAST
-// ═══════════════════════════════════════════
-function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+async function loadCoachDaySchedule(k){
+  const el=document.getElementById('co-day-sched');
+  el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
+  const s=await GET(fb(`schedule/${k}`));
+  if(!s.exists()){el.innerHTML='<div class="empty">當日無課程</div>';return;}
+  const items=Object.values(s.val()).filter(c=>c.coach===CU.name).sort((a,b)=>a.time.localeCompare(b.time));
+  if(!items.length){el.innerHTML='<div class="empty">當日無您的課程</div>';return;}
+  el.innerHTML=items.map(c=>`
+    <div class="si">
+      <div class="si-time">${c.time}</div>
+      <div class="si-info"><div class="si-name">${c.name}</div><div class="si-sub">${c.enrolled||0}/${c.seats}人</div></div>
+      <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':'個'}</div>
+    </div>`).join('');
+}
 
-function showToast(msg, type=''){
+function closeModal(id){document.getElementById(id).classList.remove('on');}
+function closeOvl(id){document.getElementById(id).classList.remove('on');}
+
+function showToast(msg,type=''){
   const t=document.getElementById('toast');
   t.textContent=msg;
-  t.className='toast'+(type?' '+type:'')+' show';
-  setTimeout(()=>t.classList.remove('show'),2800);
+  t.className='toast on'+(type?' '+type:'');
+  setTimeout(()=>t.classList.remove('on'),2800);
 }
 
-// ═══════════════════════════════════════════
-//  ROLE MANAGEMENT (admin only)
-// ═══════════════════════════════════════════
-function openRoleOverlay(){
-  if(currentUser.role !== 'admin'){ showToast('僅管理員可使用','err'); return; }
-  document.getElementById('role-overlay').classList.add('open');
-  loadRoleSelect();
-}
-function closeRoleOverlay(){ document.getElementById('role-overlay').classList.remove('open'); }
-
-function rmTab(id, el){
-  document.getElementById('rm-edit').style.display = id==='edit'?'block':'none';
-  document.getElementById('rm-new').style.display  = id==='new' ?'block':'none';
-  document.querySelectorAll('#role-overlay .admin-tab').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
-}
-
-async function loadRoleSelect(){
-  const snap = await GET(fbRef('users'));
-  if(!snap.exists()) return;
-  const data = snap.val();
-  const sel = document.getElementById('rm-sel');
-  sel.innerHTML = Object.entries(data)
-    .filter(([phone]) => phone !== '000000') // protect root admin from list
-    .map(([phone, v]) => `<option value="${phone}">${v.name}（${phone}）· ${roleLabel(v.role)}</option>`)
-    .join('');
-  onRmSelChange();
-}
-
-async function onRmSelChange(){
-  const phone = document.getElementById('rm-sel').value;
-  if(!phone) return;
-  const snap = await GET(fbRef(`users/${phone}`));
-  if(!snap.exists()) return;
-  const d = snap.val();
-  document.getElementById('rm-cur-role').textContent = roleLabel(d.role);
-  document.getElementById('rm-cur-type').textContent = d.type==='vip'?'⭐ 月費VIP':'一般';
-  document.getElementById('rm-cur-pts').textContent  = d.pts + ' 點';
-  document.getElementById('rm-role').value = d.role;
-  document.getElementById('rm-type').value = d.type||'standard';
-  document.getElementById('rm-pts').value  = '';
-}
-
-async function confirmRoleChange(){
-  const phone = document.getElementById('rm-sel').value;
-  const role  = document.getElementById('rm-role').value;
-  const type  = document.getElementById('rm-type').value;
-  const ptsRaw= document.getElementById('rm-pts').value;
-  const err   = document.getElementById('rm-err');
-  err.textContent='';
-  if(!phone){ err.textContent='請選擇帳號'; return; }
-  try{
-    const updates = { role, type };
-    if(ptsRaw !== '') updates.pts = parseInt(ptsRaw)||0;
-    await UPDATE(fbRef(`users/${phone}`), updates);
-    showToast('✓ 帳號資料已更新');
-    onRmSelChange(); // refresh display
-    loadAdminMembers(); // refresh member list
-  }catch(e){ err.textContent='更新失敗'; console.error(e); }
-}
-
-async function createStaffAccount(){
-  const name  = document.getElementById('nc-name').value.trim();
-  const phone = document.getElementById('nc-phone').value.trim();
-  const pass  = document.getElementById('nc-pass').value;
-  const role  = document.getElementById('nc-role').value;
-  const err   = document.getElementById('nc-err');
-  err.textContent='';
-  if(!name||!phone||!pass){ err.textContent='請填寫所有欄位'; return; }
-  if(pass.length<6){ err.textContent='密碼至少需6位'; return; }
-  try{
-    const snap = await GET(fbRef(`users/${phone}`));
-    if(snap.exists()){ err.textContent='此號碼已有帳號'; return; }
-    await SET(fbRef(`users/${phone}`), {
-      name, pw:pass, role, pts:0, type:'standard', createdAt:Date.now()
-    });
-    showToast(`✓ ${roleLabel(role)}帳號 ${name} 建立成功`);
-    document.getElementById('nc-name').value='';
-    document.getElementById('nc-phone').value='';
-    document.getElementById('nc-pass').value='';
-    loadRoleSelect();
-  }catch(e){ err.textContent='建立失敗'; console.error(e); }
-}
-
-// allow enter key on login
-document.addEventListener('keydown', e=>{ if(e.key==='Enter'){ const l=document.getElementById('login-screen'); if(l.classList.contains('active')) doLogin(); } });
+document.addEventListener('keydown',e=>{if(e.key==='Enter'){const l=document.getElementById('scr-login');if(l.classList.contains('active'))doLogin();}});
 </script>
 </body>
 </html>
