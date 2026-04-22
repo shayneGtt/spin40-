@@ -585,11 +585,16 @@ img{display:block;}
     <!-- SCHEDULE MANAGEMENT (renamed from at-schedule) -->
     <div id="at-schedule" class="asec">
       <div>
-        <div class="shdr">
-          <div class="stitle">固定教練設定</div>
-          <div class="sact" onclick="saveAllFixedCoaches()">儲存全部</div>
+        <div class="shdr" onclick="toggleFixedSched()" style="cursor:pointer;user-select:none;">
+          <div class="stitle" style="display:flex;align-items:center;gap:8px;">
+            固定課表設定
+            <span id="fixed-sched-chevron" style="font-size:12px;color:var(--gray);transition:transform .2s;">▶</span>
+          </div>
+          <div style="font-size:12px;color:var(--gray);" id="fixed-sched-hint">點擊展開</div>
         </div>
-        <div class="card" id="fixed-coach-table"><div class="loading"><div class="spinner"></div>載入中</div></div>
+        <div id="fixed-sched-body" style="display:none;">
+          <div style="padding-bottom:4px;" id="fixed-coach-table"><div class="loading"><div class="spinner"></div>載入中</div></div>
+        </div>
       </div>
       <div style="margin-top:4px;"><div class="dstrip" id="admin-sched-dstrip"></div></div>
       <div class="shdr">
@@ -829,7 +834,22 @@ img{display:block;}
       <div class="flabel" style="margin-bottom:8px;">指派學生（可選，可多人）</div>
       <div style="display:flex;gap:8px;margin-bottom:8px;">
         <input class="finput" type="text" id="acm-student-search" placeholder="🔍 搜尋學員姓名或電話"
-          oninput="filterAssignableStudents()" style="padding:9px 12px;font-size:13px;">
+          oninput="filterAssignableStudents()" style="padding:9px 12px;font-size:13px;flex:1;">
+        <button class="btn btn-sm" style="background:var(--amber-l,#fff8e1);color:#b45309;border:2px solid #f6c90e;border-radius:12px;padding:0 12px;font-size:12px;font-weight:700;white-space:nowrap;"
+          onclick="toggleCashForm()">💵 現金</button>
+      </div>
+      <!-- Cash student quick-add form -->
+      <div id="acm-cash-form" style="display:none;background:#fff8e1;border:2px solid #f6c90e;border-radius:12px;padding:12px;margin-bottom:8px;">
+        <div style="font-size:12px;font-weight:800;color:#b45309;margin-bottom:8px;">新增現金付費學員</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <input class="finput" type="text" id="cash-name" placeholder="姓名" style="padding:8px 10px;font-size:13px;">
+          <input class="finput" type="tel" id="cash-phone" placeholder="電話" style="padding:8px 10px;font-size:13px;">
+        </div>
+        <div class="errmsg" id="cash-err" style="margin-bottom:6px;"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-gray" style="flex:1;" onclick="toggleCashForm()">取消</button>
+          <button class="btn btn-sm" style="flex:1;background:#f6c90e;color:#78350f;border:none;" onclick="addCashStudent()">加入指派</button>
+        </div>
       </div>
       <div id="acm-student-list" style="max-height:160px;overflow-y:auto;border:2px solid var(--border);border-radius:12px;background:var(--bg);">
         <div class="empty" style="padding:12px;">載入學員中...</div>
@@ -1030,8 +1050,14 @@ img{display:block;}
     <p>教練 / 管理員帳號請洽球館人員</p>
   </div>
   <div class="obody">
-    <div><div class="flabel">姓名</div><input class="finput" type="text" id="r-name" placeholder="真實姓名"></div>
-    <div><div class="flabel">手機號碼（帳號）</div><input class="finput" type="tel" id="r-phone" placeholder="0912345678"></div>
+    <div><div class="flabel">姓名</div><input class="finput" type="text" id="r-name" placeholder="真實姓名" oninput="checkCashStudentMatch()"></div>
+    <div><div class="flabel">手機號碼（帳號）</div><input class="finput" type="tel" id="r-phone" placeholder="0912345678" oninput="checkCashStudentMatch()"></div>
+    <!-- Cash student match notice -->
+    <div id="r-cash-notice" style="display:none;background:#fff8e1;border:2px solid #f6c90e;border-radius:12px;padding:12px;font-size:13px;">
+      <div style="font-weight:800;color:#b45309;margin-bottom:4px;">🔗 找到現金付費紀錄</div>
+      <div id="r-cash-detail" style="color:#78350f;font-size:12px;"></div>
+      <div style="font-size:11px;color:#92400e;margin-top:4px;">建立帳號後將自動帶入上課紀錄</div>
+    </div>
     <div><div class="flabel">密碼</div><input class="finput" type="password" id="r-pass" placeholder="至少6位數"></div>
     <div><div class="flabel">確認密碼</div><input class="finput" type="password" id="r-pass2" placeholder="再輸入一次"></div>
     <div class="errmsg" id="r-err"></div>
@@ -2263,6 +2289,27 @@ async function createStaff(){
 // ═══════════════════════════════════════════
 //  REGISTER
 // ═══════════════════════════════════════════
+async function checkCashStudentMatch(){
+  const name=document.getElementById('r-name').value.trim();
+  const phone=document.getElementById('r-phone').value.trim();
+  const notice=document.getElementById('r-cash-notice');
+  const detail=document.getElementById('r-cash-detail');
+  if(!phone||!/^09\d{8}$/.test(phone)){notice.style.display='none';return;}
+  try{
+    const snap=await GET(fb(`cashStudents/${phone}`));
+    if(snap.exists()&&snap.val().classes){
+      const count=Object.keys(snap.val().classes).length;
+      const profName=snap.val().profile?.name||'';
+      if(!name||profName.includes(name)||name.includes(profName)||phone){
+        detail.textContent=`找到 ${profName||phone} 的現金上課紀錄，共 ${count} 堂課`;
+        notice.style.display='block';
+        return;
+      }
+    }
+  }catch(e){}
+  notice.style.display='none';
+}
+
 function openReg(){document.getElementById('ovl-reg').classList.add('on');}
 async function doRegister(){
   if(!DB){showToast('系統初始化中','err');return;}
@@ -2280,7 +2327,30 @@ async function doRegister(){
     const s=await GET(fb(`users/${phone}`));
     if(s.exists()){err.textContent='此號碼已註冊';return;}
     await SET(fb(`users/${phone}`),{name,pw:pass,role:'student',pts:0,type:'standard',createdAt:Date.now()});
-    showToast('✓ 註冊成功，請登入');
+
+    // Check for matching cash student records (same phone or same name+phone)
+    const cashSnap=await GET(fb(`cashStudents/${phone}`));
+    let importedCount=0;
+    if(cashSnap.exists()){
+      const cashData=cashSnap.val();
+      // Import class history into user history
+      if(cashData.classes){
+        for(const [,cls] of Object.entries(cashData.classes)){
+          await PUSH(fb(`history/${phone}`),{
+            label:`${cls.className} ${cls.time}（教練：${cls.coach||'—'}）[現金課程轉入]`,
+            delta:0, ts:cls.ts||Date.now()
+          });
+          importedCount++;
+        }
+      }
+      // Mark cash record as imported
+      await UPD(fb(`cashStudents/${phone}`),{importedTo:phone,importedAt:Date.now()});
+    }
+
+    const msg=importedCount>0
+      ?`✓ 註冊成功！已自動帶入 ${importedCount} 筆上課紀錄，請登入`
+      :'✓ 註冊成功，請登入';
+    showToast(msg);
     closeOvl('ovl-reg');
     document.getElementById('l-phone').value=phone;
   }catch(e){err.textContent='連線錯誤';console.error(e);}
@@ -2332,42 +2402,131 @@ function aTab(id,el){
 async function loadAdminStats(){
   const el=document.getElementById('stats-member-list');
   el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
-  const [us,hs]=await Promise.all([GET(fb('users')),GET(fb('history'))]);
-  if(!us.exists()){el.innerHTML='<div class="empty">無學員資料</div>';return;}
+  const [us,hs,cashSnap]=await Promise.all([GET(fb('users')),GET(fb('history')),GET(fb('cashStudents'))]);
+  if(!us.exists()&&!cashSnap.exists()){el.innerHTML='<div class="empty">無學員資料</div>';return;}
   const histData=hs.exists()?hs.val():{};
-  const students=Object.entries(us.val())
-    .filter(([,v])=>v.role==='student')
-    .map(([phone,v])=>{
-      const ph=histData[phone]?Object.values(histData[phone]):[];
-      const cards=ph.filter(h=>h.delta>0&&h.delta===11).length;
-      return {phone,name:v.name,pts:v.pts||0,type:v.type||'standard',ageGroup:v.ageGroup||'',cards,createdAt:v.createdAt||0};
-    })
-    .sort((a,b)=>a.name.localeCompare(b.name,'zh-TW'));
+  const now=new Date();
+  const thisMk=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  const CARD_PRICE=4000;
+  const CASH_PRICE={group:400,private:800,duo:400}; // per person per class
+
+  // Course card students
+  const cardStudents=us.exists()
+    ?Object.entries(us.val())
+      .filter(([,v])=>v.role==='student')
+      .map(([phone,v])=>{
+        const ph=histData[phone]?Object.values(histData[phone]):[];
+        const cards=ph.filter(h=>h.delta===11).length;
+        const totalPts=ph.filter(h=>h.delta<0).reduce((sum,h)=>sum+Math.abs(h.delta),0);
+        const monthPts=ph.filter(h=>{
+          if(h.delta>=0) return false;
+          const d=new Date(h.ts);
+          return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`===thisMk;
+        }).reduce((sum,h)=>sum+Math.abs(h.delta),0);
+        return {phone,name:v.name,pts:v.pts||0,type:v.type||'standard',
+          ageGroup:v.ageGroup||'',cards,totalPts,monthPts,
+          totalSpent:cards*CARD_PRICE,cash:false};
+      })
+    :[];
+
+  // Cash students
+  const cashStudents=[];
+  if(cashSnap.exists()){
+    Object.entries(cashSnap.val()).forEach(([phone,data])=>{
+      if(data.importedTo) return;
+      const classes=data.classes?Object.values(data.classes):[];
+      const calcSpent=list=>list.reduce((s,c)=>s+(CASH_PRICE[c.type]||400),0);
+      const monthClasses=classes.filter(c=>{
+        if(!c.ts) return false;
+        const d=new Date(c.ts);
+        return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`===thisMk;
+      });
+      cashStudents.push({
+        phone,name:data.profile?.name||phone,type:'cash',ageGroup:'',
+        cards:0,cash:true,
+        totalClasses:classes.length,monthClasses:monthClasses.length,
+        totalSpent:calcSpent(classes),monthSpent:calcSpent(monthClasses),
+        totalPts:classes.length,monthPts:monthClasses.length,
+      });
+    });
+  }
+
+  const rank=s=>s.type==='vip'?0:s.cash?2:1;
+  const all=[...cardStudents,...cashStudents].sort((a,b)=>{
+    if(rank(a)!==rank(b)) return rank(a)-rank(b);
+    return a.name.localeCompare(b.name,'zh-TW');
+  });
+  const vipCount=all.filter(s=>s.type==='vip').length;
+  const regularCount=all.filter(s=>!s.cash&&s.type!=='vip').length;
+  const cashCount=cashStudents.length;
+
+  const sHdr=(txt,color)=>
+    `<div style="font-size:10px;font-weight:800;color:${color};letter-spacing:1px;padding:8px 10px 2px;">${txt}</div>`;
+
+  const rows=all.map((s,i)=>{
+    const prev=i>0?all[i-1]:null;
+    const isVip=s.type==='vip';
+    const isCash=s.cash;
+    let hdr='';
+    if(i===0){
+      if(isVip) hdr=sHdr('── 月費學員 ──','var(--pink)');
+      else if(!isCash) hdr=sHdr('── 課程卡學員 ──','var(--teal)');
+      else hdr=sHdr('── 現金學員 ──','#b45309');
+    } else {
+      if(prev.type==='vip'&&!isVip&&!isCash) hdr=sHdr('── 課程卡學員 ──','var(--teal)');
+      if(!prev.cash&&isCash) hdr=sHdr('── 現金學員 ──','#b45309');
+    }
+    // 當月點/堂 · 歷史點/堂 · 購卡 · 花費
+    const c1=isVip?'—':isCash?s.monthClasses+'堂':String(s.monthPts||0);
+    const c2=isVip?'—':isCash?s.totalClasses+'堂':String(s.totalPts||0);
+    const c3=isVip?'—':isCash?'—':s.cards+'張';
+    const c4=isVip?'—':`$${s.totalSpent.toLocaleString()}`;
+    const c1col=!isVip&&!isCash&&s.monthPts>0?'var(--pink)':
+                !isVip&&isCash&&s.monthClasses>0?'#b45309':'var(--gray)';
+
+    return `${hdr}<div style="padding:10px 12px;border-bottom:1px solid var(--border);${isVip?'background:rgba(240,80,138,.03);':isCash?'background:#fffbeb;':''}>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+        <span style="font-size:14px;font-weight:800;">${s.name}</span>
+        ${isVip?'<span class="viptag">月費</span>':''}
+        ${isCash?'<span style="font-size:10px;background:#f6c90e;color:#78350f;padding:2px 7px;border-radius:8px;font-weight:800;">現金</span>':''}
+        ${s.ageGroup?`<span class="agetag">${s.ageGroup==='adult'?'成人':'青少年'}</span>`:''}
+        <span style="font-size:11px;color:var(--gray);">${s.phone}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-top:6px;">
+        <div style="background:var(--bg);border-radius:8px;padding:6px 4px;text-align:center;">
+          <div style="font-size:9px;color:var(--gray);font-weight:700;margin-bottom:3px;">當月點/堂</div>
+          <div style="font-size:15px;font-weight:900;color:${c1col};">${c1}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:6px 4px;text-align:center;">
+          <div style="font-size:9px;color:var(--gray);font-weight:700;margin-bottom:3px;">歷史點/堂</div>
+          <div style="font-size:15px;font-weight:900;color:var(--gray);">${c2}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:6px 4px;text-align:center;">
+          <div style="font-size:9px;color:var(--gray);font-weight:700;margin-bottom:3px;">購卡</div>
+          <div style="font-size:15px;font-weight:900;color:var(--teal);">${c3}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:8px;padding:6px 4px;text-align:center;">
+          <div style="font-size:9px;color:var(--gray);font-weight:700;margin-bottom:3px;">花費</div>
+          <div style="font-size:13px;font-weight:900;color:${isVip?'var(--gray)':'var(--teal2)'};">${c4}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 
   el.innerHTML=`
-    <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:0;font-size:11px;font-weight:700;color:var(--gray);padding:8px 12px;letter-spacing:.5px;border-bottom:2px solid var(--border);">
-      <div style="min-width:28px;">#</div><div>姓名 / 手機</div><div style="text-align:center;min-width:48px;">點數</div><div style="text-align:right;min-width:52px;">已購卡</div>
+    <div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--gray);">共 ${all.length} 位</span>
+      <span style="font-size:12px;color:var(--pink);font-weight:700;">月費 ${vipCount}</span>
+      <span style="font-size:12px;color:var(--teal);font-weight:700;">課程卡 ${regularCount}</span>
+      ${cashCount?`<span style="font-size:12px;color:#b45309;font-weight:700;">現金 ${cashCount}</span>`:''}
     </div>
-    ${students.map((s,i)=>`
-    <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:0;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);">
-      <div style="font-size:12px;color:var(--gray);min-width:28px;">${i+1}</div>
-      <div>
-        <div style="font-size:14px;font-weight:700;">${s.name}
-          ${s.type==='vip'?'<span class="viptag">月費</span>':''}
-          ${s.ageGroup?`<span class="agetag">${s.ageGroup==='adult'?'成人':'青少年'}</span>`:''}
-        </div>
-        <div style="font-size:11px;color:var(--gray);">${s.phone}</div>
-      </div>
-      <div style="text-align:center;font-size:15px;font-weight:900;color:var(--teal);min-width:48px;">${s.type==='vip'?'月費':s.pts}</div>
-      <div style="text-align:right;font-size:14px;font-weight:700;color:var(--gray);min-width:52px;">${s.cards} 張</div>
-    </div>`).join('')}
-    <div style="padding:10px 12px;font-size:12px;color:var(--gray);border-top:1px solid var(--border);">共 ${students.length} 位學員</div>
-  `;
+    ${rows}
+    <div style="padding:8px 10px;font-size:10px;color:var(--gray);border-top:1px solid var(--border);">
+      課程卡：購卡張數×$4,000 ／ 現金：個人課$800 · 雙人課$400/人 · 團體班$400
+    </div>`;
 }
 
-// ═══════════════════════════════════════════
-//  FIX 2: WEEK PLAN
-// ═══════════════════════════════════════════
+
 async function loadWeekPlan(){
   const el=document.getElementById('weekplan-content');
   el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
@@ -2600,9 +2759,20 @@ async function deleteBonus(mk, key){
 // ═══════════════════════════════════════════
 let adminSchedDate = '';
 
+function toggleFixedSched(){
+  const body=document.getElementById('fixed-sched-body');
+  const chevron=document.getElementById('fixed-sched-chevron');
+  const hint=document.getElementById('fixed-sched-hint');
+  const isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'block';
+  chevron.style.transform=isOpen?'':'rotate(90deg)';
+  hint.textContent=isOpen?'點擊展開':'點擊收合';
+  if(!isOpen) loadEditableFixedSchedule(); // load only when first opened
+}
+
 async function initAdminSched(){
   buildAdminSchedDstrip();
-  loadEditableFixedSchedule();
+  // Fixed schedule section is collapsed by default — loaded lazily on open
   const today = dayKey(new Date());
   adminSchedDate = today;
   loadAdminSchedDay(today, '今日課程');
@@ -2865,12 +3035,28 @@ async function loadAssignableStudents(){
       .filter(([,v])=>v.role==='student')
       .map(([phone,v])=>({phone,name:v.name,pts:v.pts||0}));
   }
-  renderStudentList(allStudentsCache);
+  // Also load cash students that haven't been imported yet
+  const cashSnap=await GET(fb('cashStudents'));
+  let cashList=[];
+  if(cashSnap.exists()){
+    Object.entries(cashSnap.val()).forEach(([phone,data])=>{
+      if(data.importedTo) return; // already converted to real account
+      if(allStudentsCache.some(u=>u.phone===phone)) return; // already has account
+      const count=data.classes?Object.keys(data.classes).length:0;
+      cashList.push({phone,name:data.profile?.name||phone,pts:0,cash:true,classCount:count});
+    });
+  }
+  renderStudentList([...allStudentsCache,...cashList]);
 }
 
 function filterAssignableStudents(){
   const q=document.getElementById('acm-student-search').value.toLowerCase();
-  const filtered=allStudentsCache.filter(s=>s.name.includes(q)||s.phone.includes(q));
+  const all=[...allStudentsCache];
+  // also include cash students already in the list
+  assignedStudents.filter(s=>s.cash).forEach(cs=>{
+    if(!all.some(u=>u.phone===cs.phone)) all.push(cs);
+  });
+  const filtered=all.filter(s=>!q||s.name.toLowerCase().includes(q)||s.phone.includes(q));
   renderStudentList(filtered);
 }
 
@@ -2879,12 +3065,14 @@ function renderStudentList(students){
   if(!students.length){el.innerHTML='<div class="empty" style="padding:10px;">無符合學員</div>';return;}
   el.innerHTML=students.map(s=>{
     const sel=assignedStudents.some(a=>a.phone===s.phone);
-    return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);${sel?'background:var(--teal-l);':''}">
-      <input type="checkbox" ${sel?'checked':''} onchange="toggleAssignStudent('${s.phone}','${s.name}',${s.pts})"
-        style="width:17px;height:17px;accent-color:var(--teal);cursor:pointer;flex-shrink:0;">
+    const isCash=s.cash===true;
+    const bg=sel?(isCash?'#fff8e1':'var(--teal-l)'):'';
+    return `<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);${bg?'background:'+bg+';':''}">
+      <input type="checkbox" ${sel?'checked':''} onchange="toggleAssignStudent('${s.phone}','${s.name}',${s.pts||0})"
+        style="width:17px;height:17px;accent-color:${isCash?'#f6c90e':'var(--teal)'};cursor:pointer;flex-shrink:0;">
       <div style="flex:1;">
-        <div style="font-size:13px;font-weight:700;">${s.name}</div>
-        <div style="font-size:11px;color:var(--gray);">${s.phone} · ${s.pts} pts</div>
+        <div style="font-size:13px;font-weight:700;">${s.name}${isCash?'<span style="font-size:10px;background:#f6c90e;color:#78350f;padding:1px 6px;border-radius:8px;margin-left:5px;font-weight:800;">現金</span>':''}</div>
+        <div style="font-size:11px;color:var(--gray);">${s.phone}${isCash?` · 已上 ${s.classCount||0} 堂`:` · ${s.pts} pts`}</div>
       </div>
     </label>`;
   }).join('');
@@ -2906,11 +3094,51 @@ function toggleAssignStudent(phone,name,pts){
 function renderAssignedChips(){
   const el=document.getElementById('acm-assigned-chips');
   if(!assignedStudents.length){el.innerHTML='';return;}
-  el.innerHTML=assignedStudents.map(s=>`
-    <span style="display:inline-flex;align-items:center;gap:5px;background:var(--teal);color:#fff;font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;">
-      ${s.name}
-      <span onclick="toggleAssignStudent('${s.phone}','${s.name}',${s.pts})" style="cursor:pointer;font-size:14px;line-height:1;">×</span>
-    </span>`).join('');
+  el.innerHTML=assignedStudents.map(s=>{
+    const isCash=s.cash===true;
+    const bg=isCash?'#f6c90e':'var(--teal)';
+    const fg=isCash?'#78350f':'#fff';
+    return `<span style="display:inline-flex;align-items:center;gap:5px;background:${bg};color:${fg};font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;">
+      ${isCash?'💵 ':''}${s.name}
+      <span onclick="toggleAssignStudent('${s.phone}','${s.name}',${s.pts||0})" style="cursor:pointer;font-size:14px;line-height:1;">×</span>
+    </span>`;
+  }).join('');
+}
+
+// ── Cash student helpers ──
+function toggleCashForm(){
+  const f=document.getElementById('acm-cash-form');
+  const open=f.style.display!=='none';
+  f.style.display=open?'none':'block';
+  if(!open){
+    document.getElementById('cash-name').value='';
+    document.getElementById('cash-phone').value='';
+    document.getElementById('cash-err').textContent='';
+  }
+}
+
+async function addCashStudent(){
+  const name=document.getElementById('cash-name').value.trim();
+  const phone=document.getElementById('cash-phone').value.trim();
+  const err=document.getElementById('cash-err');
+  err.textContent='';
+  if(!name){err.textContent='請填寫姓名';return;}
+  if(!phone){err.textContent='請填寫電話';return;}
+  // Check if already a registered user
+  const userSnap=await GET(fb(`users/${phone}`));
+  if(userSnap.exists()){
+    // Treat as normal student
+    const u=userSnap.val();
+    toggleAssignStudent(phone,u.name,u.pts||0);
+    toggleCashForm();
+    return;
+  }
+  // Add as cash student
+  if(assignedStudents.some(a=>a.phone===phone)){err.textContent='此學員已在指派名單';return;}
+  assignedStudents.push({phone,name,pts:0,ptsToDeduct:0,cash:true});
+  renderAssignedChips();
+  toggleCashForm();
+  showToast(`✓ 已加入 ${name}（現金）`);
 }
 
 async function populateCoachSelect(currentCoach){
@@ -2957,7 +3185,11 @@ async function confirmAdminClass(){
   // Attach assigned students (with pts to deduct based on class type)
   if(assignedStudents.length>0){
     const ptsToDeduct=type==='private'?2:1;
-    classObj.assignedStudents=assignedStudents.map(s=>({phone:s.phone,name:s.name,ptsToDeduct}));
+    classObj.assignedStudents=assignedStudents.map(s=>({
+      phone:s.phone, name:s.name,
+      ptsToDeduct: s.cash ? 0 : ptsToDeduct,  // cash students deduct 0 pts
+      cash: s.cash||false
+    }));
   }
 
   try{
@@ -3062,20 +3294,35 @@ async function confirmAttendance(){
   const {dateKey,classKey,classData}=attendState;
   const students=classData.assignedStudents||[];
   try{
-    // Deduct points from each student
+    let deductedCount=0;
+    let cashCount=0;
     for(const s of students){
-      const us=await GET(fb(`users/${s.phone}`));
-      if(!us.exists()) continue;
-      const cur=us.val().pts||0;
-      const newPts=Math.max(0,cur-s.ptsToDeduct);
-      await UPD(fb(`users/${s.phone}`),{pts:newPts});
-      await PUSH(fb(`history/${s.phone}`),{
-        label:`${classData.name} ${classData.time}（教練：${classData.coach||'—'}）`,
-        delta:-s.ptsToDeduct, ts:Date.now()
-      });
+      if(s.cash){
+        // Cash student — write to cashStudents record instead of deducting pts
+        cashCount++;
+        const classRecord={
+          className:classData.name, time:classData.time, dateKey,
+          coach:classData.coach||'—', type:classData.type, ts:Date.now()
+        };
+        await PUSH(fb(`cashStudents/${s.phone}/classes`),classRecord);
+        // Ensure profile exists
+        const cp=await GET(fb(`cashStudents/${s.phone}/profile`));
+        if(!cp.exists()) await SET(fb(`cashStudents/${s.phone}/profile`),{name:s.name,phone:s.phone,createdAt:Date.now()});
+      } else {
+        // Normal student — deduct points
+        const us=await GET(fb(`users/${s.phone}`));
+        if(!us.exists()) continue;
+        const cur=us.val().pts||0;
+        const newPts=Math.max(0,cur-s.ptsToDeduct);
+        await UPD(fb(`users/${s.phone}`),{pts:newPts});
+        await PUSH(fb(`history/${s.phone}`),{
+          label:`${classData.name} ${classData.time}（教練：${classData.coach||'—'}）`,
+          delta:-s.ptsToDeduct, ts:Date.now()
+        });
+        deductedCount++;
+      }
     }
     // Mark class as confirmed
-    // If it's a fixed template class, write it to Firebase first
     const existing=await GET(fb(`schedule/${dateKey}/${classKey}`));
     if(existing.exists()){
       await UPD(fb(`schedule/${dateKey}/${classKey}`),{confirmed:true});
@@ -3083,7 +3330,8 @@ async function confirmAttendance(){
       await SET(fb(`schedule/${dateKey}/${classKey}`),{...classData,confirmed:true});
     }
     closeModal('attend-modal');
-    showToast(`✓ 已確認，共扣 ${students.length} 位學員點數`);
+    const msg=`✓ 已確認${deductedCount?`，扣點 ${deductedCount} 人`:''}${cashCount?`，現金 ${cashCount} 人`:''}`;
+    showToast(msg);
     loadPendingConfirmations();
     loadCoachSchedule();
     // Update coach hours
