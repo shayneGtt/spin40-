@@ -1206,7 +1206,36 @@ let cancelKey_ = null;
 let cancelPts_ = 0;
 let cancelTbl_ = null;
 let schedFilter = 'all';
-let coachWeekOffset = 0; // weeks relative to current week for coach schedule view
+let coachWeekOffset = 0;
+let _scheduleListenerActive = false; // prevent duplicate onValue listeners
+
+// Central schedule change handler — redraws all visible schedule views
+function onScheduleChanged(){
+  // Admin views
+  if(document.getElementById('a-today')) loadTodayAdmin();
+  if(adminSchedDate){
+    const lbl = document.getElementById('admin-sched-day-title')?.textContent || '';
+    loadAdminSchedDay(adminSchedDate, lbl);
+  }
+  const wpEl = document.getElementById('weekplan-content');
+  if(wpEl && !wpEl.closest('.asec') || wpEl?.closest('.asec.on')) loadWeekPlan();
+  // Coach views
+  if(CU?.role === 'coach'){
+    loadCoachSchedule();
+    loadCoachWeekSched();
+    loadPendingConfirmations();
+  }
+}
+
+function startScheduleListener(){
+  if(_scheduleListenerActive) return;
+  _scheduleListenerActive = true;
+  ONVAL(fb('schedule'), () => {
+    // Small debounce to avoid multiple rapid redraws
+    clearTimeout(window._schedDebounce);
+    window._schedDebounce = setTimeout(onScheduleChanged, 300);
+  });
+}
 let fixedCoachCache = {}; // {dow_time: coachName}
 let fixedScheduleCache = {}; // Firebase fixedSchedule data
 
@@ -1286,16 +1315,19 @@ function goStudent(){
 function goCoach(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('scr-coach').classList.add('active');
+  startScheduleListener();
   setupCoach();
 }
 function goAdmin(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('scr-admin').classList.add('active');
+  startScheduleListener();
   setupAdmin();
 }
 
 function doLogout(){
   CU=null; selAge_=null;
+  _scheduleListenerActive=false; // allow re-attach on next login
   try{ localStorage.removeItem('spin40_session'); }catch(e){}
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('bnav').classList.remove('on');
@@ -1908,12 +1940,20 @@ async function adminCancelBooking(key, pts, tbl, userPhone, userName){
 
 async function loadTodayAdmin(){
   const el=document.getElementById('a-today');
-  const s=await GET(fb(`schedule/${dayKey(new Date())}`));
-  if(!s.exists()){el.innerHTML='<div class="empty">今日無排課</div>';return;}
-  el.innerHTML=Object.values(s.val()).sort((a,b)=>a.time.localeCompare(b.time)).map(c=>`
+  if(!el) return;
+  const today=dayKey(new Date());
+  const s=await GET(fb(`schedule/${today}`));
+  const template=getFixedClassesForDate(today)||{};
+  const merged={...template,...(s.exists()?s.val():{})};
+  const classes=Object.values(merged).sort((a,b)=>a.time.localeCompare(b.time));
+  if(!classes.length){el.innerHTML='<div class="empty">今日無排課</div>';return;}
+  el.innerHTML=classes.map(c=>`
     <div class="si">
       <div class="si-time">${c.time}</div>
-      <div class="si-info"><div class="si-name">${c.name}</div><div class="si-sub">${c.coach} · ${c.enrolled||0}/${c.seats}人</div></div>
+      <div class="si-info">
+        <div class="si-name">${c.name}</div>
+        <div class="si-sub" style="color:${(!c.coach||c.coach==='待指派')?'var(--pink)':''};">${c.coach||'待指派'} · ${c.enrolled||0}/${c.seats}人</div>
+      </div>
       <div class="badge ${c.type==='group'?'bg':'bp'}">${c.enrolled||0}/${c.seats}</div>
     </div>`).join('');
 }
