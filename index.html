@@ -790,14 +790,14 @@ img{display:block;}
 
     <div style="margin-bottom:13px;">
       <div class="flabel">課程類型</div>
-      <select class="fsel" id="acm-type">
+      <select class="fsel" id="acm-type" onchange="onClassTypeChange()">
         <option value="group">團體班（學員扣 1 點）</option>
         <option value="private">個人班（學員扣 2 點）</option>
         <option value="duo">雙人班（各扣 1 點）</option>
       </select>
     </div>
 
-    <div style="margin-bottom:13px;">
+    <div style="margin-bottom:13px;" id="acm-agegroup-wrap">
       <div class="flabel">班別</div>
       <select class="fsel" id="acm-agegroup">
         <option value="youth">學生班</option>
@@ -1971,17 +1971,24 @@ async function loadTodayAdmin(){
   const s=await GET(fb(`schedule/${today}`));
   const template=getFixedClassesForDate(today)||{};
   const merged={...template,...(s.exists()?s.val():{})};
-  const classes=Object.values(merged).sort((a,b)=>a.time.localeCompare(b.time));
-  if(!classes.length){el.innerHTML='<div class="empty">今日無排課</div>';return;}
-  el.innerHTML=classes.map(c=>`
-    <div class="si">
+  const entries=Object.entries(merged).sort(([,a],[,b])=>a.time.localeCompare(b.time));
+  if(!entries.length){el.innerHTML='<div class="empty">今日無排課</div>';return;}
+  el.innerHTML=entries.map(([key,c])=>{
+    const hasStudents=c.assignedStudents?.length>0;
+    const needsConfirm=hasStudents&&!c.confirmed;
+    return `<div class="si">
       <div class="si-time">${c.time}</div>
       <div class="si-info">
-        <div class="si-name">${c.name}</div>
+        <div class="si-name">${c.name}${c.confirmed?'<span style="font-size:10px;color:var(--teal);margin-left:6px;">✓已完成</span>':''}</div>
         <div class="si-sub" style="color:${(!c.coach||c.coach==='待指派')?'var(--pink)':''};">${c.coach||'待指派'} · ${c.enrolled||0}/${c.seats}人</div>
       </div>
-      <div class="badge ${c.type==='group'?'bg':'bp'}">${c.enrolled||0}/${c.seats}</div>
-    </div>`).join('');
+      ${needsConfirm
+        ?`<button class="cancel-btn" style="background:var(--pink);color:#fff;border-color:var(--pink);font-size:11px;white-space:nowrap;"
+            onclick="adminConfirmAttendance('${today}','${key}')">確認上課</button>`
+        :`<div class="badge ${c.type==='group'?'bg':'bp'}">${c.type==='group'?'團':c.type==='private'?'個':'雙'}</div>`
+      }
+    </div>`;
+  }).join('');
 }
 
 // ── Coach Cards (admin view) ──
@@ -2192,10 +2199,22 @@ async function confirmAddPts(){
       delta:addPtsAmt, ts:Date.now()
     });
     m.pts=newPts;
+
+    // Auto-promote: if this student has cash history, mark as promoted (card member)
+    if(addPtsAmt===11){
+      const cashSnap=await GET(fb(`cashStudents/${phone}`));
+      if(cashSnap.exists()&&!cashSnap.val().importedTo){
+        await UPD(fb(`cashStudents/${phone}`),{importedTo:phone,importedAt:Date.now(),promotedByCard:true});
+        showToast(`✓ ${m.name} 已購課程卡（+11點），現金學員升級為課程卡學員 🎉`);
+      } else {
+        showToast(`✓ ${m.name} 增加 ${addPtsAmt} 點，現有 ${newPts} 點`);
+      }
+    } else {
+      showToast(`✓ ${m.name} 增加 ${addPtsAmt} 點，現有 ${newPts} 點`);
+    }
+
     closeModal('add-pts-modal');
-    showToast(`✓ ${m.name} 增加 ${addPtsAmt} 點，現有 ${newPts} 點`);
     renderMlist(allMembers);
-    // refresh deduct select too
     document.getElementById('d-sel').innerHTML=allMembers.map(x=>`<option value="${x.phone}">${x.name}（${x.phone}）· ${x.pts}pts</option>`).join('');
   }catch(e){showToast('加點失敗','err');console.error(e);}
 }
@@ -2969,7 +2988,10 @@ async function openAddClass(){
   document.getElementById('acm-time').value='13:30';
   document.getElementById('acm-type').value='group';
   document.getElementById('acm-agegroup').value='youth';
+  onClassTypeChange(); // reset locks
   document.getElementById('acm-seats').value='5';
+  document.getElementById('acm-seats').readOnly=false;
+  document.getElementById('acm-seats').style.opacity='1';
   document.getElementById('acm-table').value='';
   document.getElementById('acm-err').textContent='';
   document.getElementById('acm-title').textContent='新增課程';
@@ -3006,7 +3028,13 @@ async function openEditClass(dateKey, classKey){
   document.getElementById('acm-name').value=c.name||'';
   document.getElementById('acm-type').value=c.type||'group';
   document.getElementById('acm-agegroup').value=c.ageGroup||'youth';
+  onClassTypeChange(); // apply seat + agegroup locks based on loaded type
   document.getElementById('acm-seats').value=c.seats||5;
+  // Lock seats based on type
+  const seatsEl=document.getElementById('acm-seats');
+  if((c.type||'group')==='private'){seatsEl.value=1;seatsEl.readOnly=true;seatsEl.style.opacity='.6';}
+  else if((c.type||'group')==='duo'){seatsEl.value=2;seatsEl.readOnly=true;seatsEl.style.opacity='.6';}
+  else{seatsEl.readOnly=false;seatsEl.style.opacity='1';}
   document.getElementById('acm-table').value=c.table||'';
   document.getElementById('acm-err').textContent='';
   document.getElementById('acm-title').textContent='編輯課程';
@@ -3028,35 +3056,29 @@ async function openEditClass(dateKey, classKey){
 }
 
 async function loadAssignableStudents(){
-  const el=document.getElementById('acm-student-list');
   if(allStudentsCache.length===0){
     const s=await GET(fb('users'));
     if(s.exists()) allStudentsCache=Object.entries(s.val())
       .filter(([,v])=>v.role==='student')
-      .map(([phone,v])=>({phone,name:v.name,pts:v.pts||0}));
+      .map(([phone,v])=>({phone,name:v.name,pts:v.pts||0,cash:false}));
   }
-  // Also load cash students that haven't been imported yet
   const cashSnap=await GET(fb('cashStudents'));
   let cashList=[];
   if(cashSnap.exists()){
     Object.entries(cashSnap.val()).forEach(([phone,data])=>{
-      if(data.importedTo) return; // already converted to real account
-      if(allStudentsCache.some(u=>u.phone===phone)) return; // already has account
+      if(data.importedTo) return;
+      if(allStudentsCache.some(u=>u.phone===phone)) return;
       const count=data.classes?Object.keys(data.classes).length:0;
       cashList.push({phone,name:data.profile?.name||phone,pts:0,cash:true,classCount:count});
     });
   }
-  renderStudentList([...allStudentsCache,...cashList]);
+  _fullStudentList=[...allStudentsCache,...cashList];
+  renderStudentList(_fullStudentList);
 }
 
 function filterAssignableStudents(){
   const q=document.getElementById('acm-student-search').value.toLowerCase();
-  const all=[...allStudentsCache];
-  // also include cash students already in the list
-  assignedStudents.filter(s=>s.cash).forEach(cs=>{
-    if(!all.some(u=>u.phone===cs.phone)) all.push(cs);
-  });
-  const filtered=all.filter(s=>!q||s.name.toLowerCase().includes(q)||s.phone.includes(q));
+  const filtered=_fullStudentList.filter(s=>!q||s.name.toLowerCase().includes(q)||s.phone.includes(q));
   renderStudentList(filtered);
 }
 
@@ -3081,14 +3103,28 @@ function renderStudentList(students){
 function toggleAssignStudent(phone,name,pts){
   const idx=assignedStudents.findIndex(a=>a.phone===phone);
   const type=document.getElementById('acm-type').value;
-  const ptsToDeduct=type==='private'?2:1;
-  if(idx>=0) assignedStudents.splice(idx,1);
-  else assignedStudents.push({phone,name,pts,ptsToDeduct});
+  const ptsToDeduct=type==='private'?2:type==='duo'?1:1;
+  if(idx>=0){
+    assignedStudents.splice(idx,1);
+  } else {
+    // Preserve cash flag from full student list
+    const allCurrent=_fullStudentList||[];
+    const found=allCurrent.find(s=>s.phone===phone);
+    const isCash=found?.cash===true;
+    assignedStudents.push({phone,name,pts,ptsToDeduct,cash:isCash});
+  }
   renderAssignedChips();
-  renderStudentList(allStudentsCache.filter(s=>{
-    const q=document.getElementById('acm-student-search').value.toLowerCase();
-    return !q||s.name.includes(q)||s.phone.includes(q);
-  }));
+  // Re-render full list (including cash) preserving search query
+  _renderCurrentStudentList();
+}
+
+// Keep a reference to the full student list (including cash) so toggling doesn't lose cash students
+let _fullStudentList=[];
+
+function _renderCurrentStudentList(){
+  const q=document.getElementById('acm-student-search')?.value.toLowerCase()||'';
+  const filtered=_fullStudentList.filter(s=>!q||s.name.toLowerCase().includes(q)||s.phone.includes(q));
+  renderStudentList(filtered);
 }
 
 function renderAssignedChips(){
@@ -3105,7 +3141,52 @@ function renderAssignedChips(){
   }).join('');
 }
 
-// ── Cash student helpers ──
+function onClassTypeChange(){
+  const type=document.getElementById('acm-type').value;
+  const seatsEl=document.getElementById('acm-seats');
+  const ageSel=document.getElementById('acm-agegroup');
+  const ageWrap=document.getElementById('acm-agegroup-wrap');
+
+  if(type==='private'){
+    seatsEl.value=1; seatsEl.readOnly=true; seatsEl.style.opacity='.6';
+    ageSel.value='flex'; ageSel.disabled=true; ageSel.style.opacity='.6';
+    ageWrap.title='個人班班別固定為彈性';
+  } else if(type==='duo'){
+    seatsEl.value=2; seatsEl.readOnly=true; seatsEl.style.opacity='.6';
+    ageSel.value='flex'; ageSel.disabled=true; ageSel.style.opacity='.6';
+    ageWrap.title='雙人班班別固定為彈性';
+  } else {
+    // group — free choice
+    seatsEl.readOnly=false; seatsEl.style.opacity='1';
+    ageSel.disabled=false; ageSel.style.opacity='1';
+    ageWrap.title='';
+    // Only show youth/adult options (remove flex)
+    if(ageSel.value==='flex') ageSel.value='youth';
+  }
+}
+
+// Admin can also confirm attendance (on behalf of coach who isn't using phone)
+async function adminConfirmAttendance(dateKey, classKey){
+  const s=await GET(fb(`schedule/${dateKey}/${classKey}`));
+  let c;
+  if(s.exists()) c=s.val();
+  else { const t=getFixedClassesForDate(dateKey); c=t?.[classKey]; }
+  if(!c||!c.assignedStudents?.length){ showToast('此課程無指派學員','err'); return; }
+  // Temporarily set attendState and open modal
+  attendState={dateKey,classKey,classData:c};
+  document.getElementById('attend-class-info').textContent=`${c.time} ${c.name}`;
+  document.getElementById('attend-class-sub').textContent=`教練：${c.coach||'—'} · ${c.assignedStudents.length} 位學員`;
+  document.getElementById('attend-students-list').innerHTML=c.assignedStudents.map(s=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-size:13px;font-weight:700;">${s.name}${s.cash?'<span style="font-size:10px;background:#f6c90e;color:#78350f;padding:1px 6px;border-radius:8px;margin-left:5px;">現金</span>':''}</div>
+        <div style="font-size:11px;color:var(--gray);">${s.phone}</div>
+      </div>
+      <div style="font-size:16px;font-weight:900;color:${s.cash?'#b45309':'var(--pink)'};font-family:'DM Sans',sans-serif;">${s.cash?'現金':'−'+s.ptsToDeduct+' pts'}</div>
+    </div>`).join('');
+  document.getElementById('attend-modal').classList.add('on');
+}
+
 function toggleCashForm(){
   const f=document.getElementById('acm-cash-form');
   const open=f.style.display!=='none';
@@ -3199,8 +3280,32 @@ async function confirmAdminClass(){
     } else {
       const existing=await GET(fb(`schedule/${adminClassEditDate}/${adminClassEditKey}`));
       if(existing.exists()){
-        classObj.enrolled=existing.val().enrolled||0;
-        classObj.confirmed=existing.val().confirmed||false;
+        const exVal=existing.val();
+        classObj.enrolled=exVal.enrolled||0;
+        classObj.confirmed=exVal.confirmed||false;
+
+        // Bug 1 fix: if class was already confirmed and type changed, adjust coach hours
+        if(exVal.confirmed && exVal.type !== type && exVal.coach){
+          const hrsOld=exVal.type==='group'?1.5:1;  // group=1.5, private/duo=1
+          const hrsNew=type==='group'?1.5:1;          // group=1.5, private/duo=1
+          const diff=hrsNew-hrsOld;
+          if(diff!==0){
+            const us=await GET(fb('users'));
+            if(us.exists()){
+              const coachEntry=Object.entries(us.val()).find(([,v])=>v.role==='coach'&&v.name===exVal.coach);
+              if(coachEntry){
+                const cPhone=coachEntry[0];
+                const mk=`${adminClassEditDate.slice(0,4)}${adminClassEditDate.slice(4,6)}`;
+                const hs=await GET(fb(`coachHours/${cPhone}`));
+                const hd=hs.exists()?hs.val():{};
+                await UPD(fb(`coachHours/${cPhone}`),{
+                  [mk]:Math.max(0,(hd[mk]||0)+diff),
+                  weekHours:Math.max(0,(hd.weekHours||0)+diff)
+                });
+              }
+            }
+          }
+        }
       }
       await SET(fb(`schedule/${adminClassEditDate}/${adminClassEditKey}`),classObj);
       const setFixed=document.getElementById('acm-set-fixed')?.checked;
@@ -3217,12 +3322,12 @@ async function confirmAdminClass(){
     adminSchedDate=dateKey;
     if(CU.role==='coach'){
       loadCoachWeekSched();
+      loadCoachHours(); // refresh hours banner immediately
     } else {
-      // Always refresh schedule tab list for the saved date
       loadAdminSchedDay(dateKey, lbl);
-      // Also refresh weekplan if it's been loaded (element exists and has content)
       const wpEl=document.getElementById('weekplan-content');
       if(wpEl&&!wpEl.querySelector('.empty')&&wpEl.innerHTML!=='') loadWeekPlan();
+      loadCoachCards(); // refresh coach hour cards in admin
     }
   }catch(e){err.textContent='儲存失敗';console.error(e);}
 }
@@ -3297,19 +3402,22 @@ async function confirmAttendance(){
     let deductedCount=0;
     let cashCount=0;
     for(const s of students){
-      if(s.cash){
-        // Cash student — write to cashStudents record instead of deducting pts
+      // Cash student rule: NEVER deduct points regardless of account status
+      // A student is "cash" if: explicitly marked cash:true, OR ptsToDeduct===0
+      const isCashStudent = s.cash === true || s.ptsToDeduct === 0;
+
+      if(isCashStudent){
         cashCount++;
         const classRecord={
           className:classData.name, time:classData.time, dateKey,
           coach:classData.coach||'—', type:classData.type, ts:Date.now()
         };
+        // Write to cashStudents path (even if they now have an account, for history)
         await PUSH(fb(`cashStudents/${s.phone}/classes`),classRecord);
-        // Ensure profile exists
         const cp=await GET(fb(`cashStudents/${s.phone}/profile`));
         if(!cp.exists()) await SET(fb(`cashStudents/${s.phone}/profile`),{name:s.name,phone:s.phone,createdAt:Date.now()});
       } else {
-        // Normal student — deduct points
+        // Normal card student — deduct points
         const us=await GET(fb(`users/${s.phone}`));
         if(!us.exists()) continue;
         const cur=us.val().pts||0;
@@ -3338,7 +3446,7 @@ async function confirmAttendance(){
     const monthKey=`${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}`;
     const hs=await GET(fb(`coachHours/${CU.phone}`));
     const hd=hs.exists()?hs.val():{};
-    const hrs=classData.type==='private'?1:1.5;
+    const hrs=classData.type==='group'?1.5:1; // group=1.5hr, private/duo=1hr
     await UPD(fb(`coachHours/${CU.phone}`),{
       [monthKey]:(hd[monthKey]||0)+hrs,
       weekHours:(hd.weekHours||0)+hrs
@@ -3368,7 +3476,7 @@ async function deleteClass(dateKey, classKey){
           const coachEntry=Object.entries(us.val()).find(([,v])=>v.role==='coach'&&v.name===c.coach);
           if(coachEntry){
             const coachPhone=coachEntry[0];
-            const hrs=c.type==='private'?1:1.5;
+            const hrs=c.type==='group'?1.5:1; // group=1.5hr, private/duo=1hr
             const mk=`${dateKey.slice(0,4)}${dateKey.slice(4,6)}`;
             const hs=await GET(fb(`coachHours/${coachPhone}`));
             const hd=hs.exists()?hs.val():{};
