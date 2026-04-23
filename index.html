@@ -313,6 +313,30 @@ img{display:block;}
 .toast{position:fixed;bottom:76px;left:50%;transform:translateX(-50%) translateY(18px);background:var(--teal);color:#fff;font-weight:700;font-size:13px;padding:10px 22px;border-radius:20px;opacity:0;transition:all .3s;z-index:500;white-space:nowrap;pointer-events:none;box-shadow:0 4px 14px rgba(45,191,170,.38);}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.err{background:var(--pink);}
+/* ── Weekly Timetable Matrix ── */
+.tt-wrap{overflow-x:auto;border-radius:14px;border:1px solid var(--border);}
+.tt-grid{display:grid;min-width:520px;}
+.tt-hdr{background:var(--bg);padding:8px 6px;text-align:center;border-bottom:2px solid var(--border);position:sticky;top:0;z-index:5;}
+.tt-hdr.today .tt-dnum{background:var(--teal);color:#fff;border-radius:50%;width:28px;height:28px;line-height:28px;margin:0 auto;}
+.tt-hdr.today .tt-dname{color:var(--teal);}
+.tt-dname{font-size:10px;font-weight:800;color:var(--gray);letter-spacing:.5px;}
+.tt-dnum{font-size:16px;font-weight:900;color:var(--txt);margin-top:1px;}
+.tt-time{background:var(--bg);padding:0 8px;display:flex;align-items:center;justify-content:flex-end;border-right:2px solid var(--border);border-bottom:1px solid var(--border);}
+.tt-time span{font-size:11px;font-weight:800;color:var(--gray);}
+.tt-cell{padding:4px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:52px;display:flex;flex-direction:column;gap:3px;}
+.tt-cell:last-child{border-right:none;}
+.tt-row-last .tt-cell,.tt-row-last .tt-time{border-bottom:none;}
+.tt-card{border-radius:7px;padding:5px 7px;cursor:pointer;transition:opacity .15s,transform .1s;border-left:3px solid transparent;}
+.tt-card:hover{opacity:.82;transform:scale(1.02);}
+.tt-card.group{background:rgba(45,191,170,.18);border-color:var(--teal);color:var(--teal2);}
+.tt-card.private{background:rgba(240,80,138,.14);border-color:var(--pink);color:var(--pink);}
+.tt-card.duo{background:rgba(251,191,36,.2);border-color:#f59e0b;color:#92400e;}
+.tt-card.unassigned{background:rgba(156,163,175,.12);border-color:var(--gray);color:var(--gray);}
+.tt-card.done{opacity:.5;}
+.tt-card-name{font-size:11px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tt-card-sub{font-size:9px;opacity:.8;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tt-empty{display:flex;align-items:center;justify-content:center;height:100%;min-height:52px;}
+.tt-dot{width:6px;height:6px;border-radius:50%;background:var(--border);}
 </style>
 </head>
 <body>
@@ -576,10 +600,15 @@ img{display:block;}
     <!-- WEEK PLAN (Fix 2) -->
     <div id="at-weekplan" class="asec">
       <div class="shdr">
-        <div class="stitle">本週教練排課總表</div>
-        <div class="sact" onclick="loadWeekPlan()">重新整理</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="weekPlanShift(-1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">‹</button>
+          <span id="weekplan-label" style="font-size:13px;font-weight:800;color:var(--gray);min-width:100px;text-align:center;"></span>
+          <button onclick="weekPlanShift(1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">›</button>
+          <button onclick="weekPlanShift(0,true)" style="background:var(--teal-l);color:var(--teal2);border:2px solid rgba(45,191,170,.3);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">本週</button>
+        </div>
+        <button class="btn btn-teal btn-sm" onclick="openAddClass()">＋ 新增</button>
       </div>
-      <div id="weekplan-content"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      <div id="weekplan-content" style="overflow-x:auto;overflow-y:auto;max-height:70dvh;border-radius:14px;"><div class="loading"><div class="spinner"></div>載入中</div></div>
     </div>
 
     <!-- SCHEDULE MANAGEMENT (renamed from at-schedule) -->
@@ -2546,54 +2575,105 @@ async function loadAdminStats(){
 }
 
 
+let weekPlanOffset=0;
+
+function weekPlanShift(delta, reset=false){
+  weekPlanOffset = reset ? 0 : weekPlanOffset+delta;
+  loadWeekPlan();
+}
+
 async function loadWeekPlan(){
   const el=document.getElementById('weekplan-content');
   el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
-  const now=new Date();
-  // Build this week Mon–Sun
-  const startOfWeek=new Date(now);
-  startOfWeek.setDate(now.getDate()-now.getDay()+1); // Mon
-  const days=[];
-  for(let i=0;i<7;i++){const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);days.push(d);}
 
-  let html='';
+  const now=new Date();
+  const monday=new Date(now);
+  monday.setDate(now.getDate()-now.getDay()+1+weekPlanOffset*7);
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(monday);d.setDate(monday.getDate()+i);days.push(d);}
+
+  const sun=new Date(monday); sun.setDate(monday.getDate()+6);
+  const lbl=document.getElementById('weekplan-label');
+  if(lbl) lbl.textContent=`${monday.getMonth()+1}/${monday.getDate()} – ${sun.getMonth()+1}/${sun.getDate()}`;
+
+  const allData={};
   for(const d of days){
     const dk=dayKey(d);
     const s=await GET(fb(`schedule/${dk}`));
     const template=getFixedClassesForDate(dk)||{};
-    const merged={...template,...(s.exists()?s.val():{})};
-    const classes=Object.entries(merged).filter(([,c])=>c.name).sort(([,a],[,b])=>a.time.localeCompare(b.time));
-    if(!classes.length) continue;
-    html+=`<div style="margin-bottom:12px;">
-      <div style="font-size:12px;font-weight:800;color:var(--gray);letter-spacing:1px;margin-bottom:8px;padding:6px 0;border-bottom:2px solid var(--border);">
-        週${'日一二三四五六'[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}
-        ${dk===dayKey(new Date())?'<span style="background:var(--teal);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;margin-left:6px;">今天</span>':''}
-      </div>
-      <div class="card" style="padding:10px;">
-        ${classes.map(([key,c])=>`
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
-            <div style="font-size:13px;font-weight:700;color:var(--gray);min-width:40px;">${c.time}</div>
-            <div style="flex:1;">
-              <div style="font-size:13px;font-weight:700;">${c.name}</div>
-              <div style="font-size:11px;color:${(!c.coach||c.coach==='待指派')?'var(--pink)':'var(--gray)'};">
-                教練：${c.coach||'待指派'}${c.assignedStudents?.length?' · '+c.assignedStudents.map(s=>s.name).join('、'):''}
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.confirmed?'✓已完成':c.type==='group'?'團':c.type==='private'?'個':'雙'}</div>
-              <button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
-                onclick="openEditClass('${dk}','${key}')">編輯</button>
-            </div>
-          </div>`).join('')}
-      </div>
-    </div>`;
+    allData[dk]={...template,...(s.exists()?s.val():{})};
   }
-  el.innerHTML=html||'<div class="empty">本週尚無排課</div>';
+
+  const todayDk=dayKey(now);
+  const DOW=['日','一','二','三','四','五','六'];
+
+  // Collect unique time slots across the week (exclude flex)
+  const timeSet=new Set();
+  days.forEach(d=>{
+    Object.values(allData[dayKey(d)]).forEach(c=>{
+      if(c.name&&c.time&&c.time!=='彈性') timeSet.add(c.time);
+    });
+  });
+  const times=[...timeSet].sort();
+
+  if(!times.length){
+    el.innerHTML='<div class="empty" style="padding:40px;">本週尚無排課</div>';
+    return;
+  }
+
+  let html='<div class="tt-wrap"><div class="tt-grid" style="grid-template-columns:52px repeat(7,1fr);">';
+
+  // Header
+  html+='<div class="tt-hdr" style="border-right:2px solid var(--border);"></div>';
+  days.forEach(d=>{
+    const isToday=dayKey(d)===todayDk;
+    html+=`<div class="tt-hdr${isToday?' today':''}">
+      <div class="tt-dname">週${DOW[d.getDay()]}</div>
+      <div class="tt-dnum">${d.getDate()}</div>
+    </div>`;
+  });
+
+  // Time rows
+  times.forEach((time,ti)=>{
+    const isLast=ti===times.length-1;
+    html+=`<div class="tt-time${isLast?' tt-row-last':''}"><span>${time}</span></div>`;
+    days.forEach((d,di)=>{
+      const dk=dayKey(d);
+      const isLastDay=di===6;
+      const cellCls=`tt-cell${isLast?' tt-row-last':''}`;
+      const entries=Object.entries(allData[dk])
+        .filter(([,c])=>c.name&&c.time===time)
+        .sort(([,a],[,b])=>(a.coach||'').localeCompare(b.coach||'')); 
+      if(!entries.length){
+        html+=`<div class="${cellCls}"><div class="tt-empty"><div class="tt-dot"></div></div></div>`;
+      } else {
+        html+=`<div class="${cellCls}">`;
+        entries.forEach(([key,c])=>{
+          const typeClass=(!c.coach||c.coach==='待指派')?'unassigned':c.type||'group';
+          const coachName=c.coach&&c.coach!=='待指派'?c.coach:'<span style="color:var(--pink);">待指派</span>';
+          const badge=c.type==='group'?'團':c.type==='private'?'個':'雙';
+          html+=`<div class="tt-card ${typeClass}${c.confirmed?' done':''}" onclick="openEditClass('${dk}','${key}')">
+            <div class="tt-card-name">${c.confirmed?'✓ ':''} ${c.name}</div>
+            <div class="tt-card-sub">${coachName} · ${badge}</div>
+            ${c.assignedStudents?.length?`<div class="tt-card-sub">👤 ${c.assignedStudents.map(s=>s.name).join('、')}</div>`:''}
+          </div>`;
+        });
+        html+='</div>';
+      }
+    });
+  });
+
+  html+='</div></div>';
+  html+=`<div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;padding:0 2px;font-size:11px;">
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:var(--teal);border-radius:3px;display:inline-block;"></span>團體班</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:var(--pink);border-radius:3px;display:inline-block;"></span>個人班</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:3px;display:inline-block;"></span>雙人班</span>
+    <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:var(--gray);border-radius:3px;display:inline-block;opacity:.4;"></span>待指派</span>
+    <span style="color:var(--gray);">· 點擊課程可編輯</span>
+  </div>`;
+  el.innerHTML=html;
 }
 
-// ═══════════════════════════════════════════
-//  FIX 7: HISTORY SCHEDULE
-// ═══════════════════════════════════════════
 async function loadHistorySched(){
   const el=document.getElementById('history-sched-content');
   el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
