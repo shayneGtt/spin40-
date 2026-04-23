@@ -498,41 +498,54 @@ img{display:block;}
       <div class="hb-sub" id="co-hrs-sub">本週：0 hrs · 本月薪資試算中</div>
     </div>
 
-    <!-- Pending confirmation — show first if any -->
-    <div id="co-pending-wrap">
-      <div class="shdr"><div class="stitle" style="color:var(--pink);">🔔 待確認上課</div></div>
-      <div id="co-pending"><div class="empty">今日無待確認課程</div></div>
+    <!-- Coach tabs -->
+    <div class="atabs" id="co-tabs">
+      <button class="atab on" onclick="coTab('co-overview',this)">總覽</button>
+      <button class="atab" onclick="coTab('co-sched',this)">排課</button>
+      <button class="atab" onclick="coTab('co-courts',this)">即時桌況</button>
     </div>
 
-    <!-- Real-time court status (coach view) -->
-    <div>
-      <div class="shdr"><div class="stitle">即時桌況</div></div>
-      <div id="courts-detail-coach"><div class="loading"><div class="spinner"></div>載入中</div></div>
-    </div>
-
-    <!-- This week schedule -->
-    <div>
-      <div class="shdr">
-        <div class="stitle">本週我的課程</div>
-        <div style="display:flex;gap:8px;">
-          <div class="sact" onclick="openCoachFixedModal()">📋 固定課表</div>
-          <div class="sact" onclick="openAddClass()">＋ 新增排課</div>
-        </div>
+    <!-- 總覽 tab -->
+    <div id="co-overview" class="asec on">
+      <div id="co-pending-wrap">
+        <div class="shdr"><div class="stitle" style="color:var(--pink);">🔔 待確認上課</div></div>
+        <div id="co-pending"><div class="empty">今日無待確認課程</div></div>
       </div>
-      <div class="card" id="co-schedule"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      <!-- Coach own weekly timetable (read-only, own classes only) -->
+      <div style="margin-top:4px;">
+        <div class="shdr">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="stitle">我的本週總表</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button onclick="coachPlanShift(-1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:3px 9px;font-size:15px;cursor:pointer;">‹</button>
+            <span id="co-plan-label" style="font-size:11px;font-weight:800;color:var(--gray);min-width:80px;text-align:center;"></span>
+            <button onclick="coachPlanShift(1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:3px 9px;font-size:15px;cursor:pointer;">›</button>
+          </div>
+        </div>
+        <div id="co-plan-content" style="overflow-x:auto;"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      </div>
     </div>
 
-    <!-- My full schedule — week slider -->
-    <div>
+    <!-- 排課 tab -->
+    <div id="co-sched" class="asec">
       <div class="shdr">
-        <div class="stitle">課表總覽</div>
-        <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
           <button onclick="coachWeekShift(-1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">‹</button>
           <span id="co-week-label" style="font-size:12px;font-weight:700;color:var(--gray);min-width:80px;text-align:center;"></span>
           <button onclick="coachWeekShift(1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">›</button>
         </div>
+        <div style="display:flex;gap:8px;">
+          <div class="sact" onclick="openCoachFixedModal()">📋 固定課表</div>
+          <div class="sact" onclick="openAddClass()">＋ 新增</div>
+        </div>
       </div>
       <div id="co-week-sched"><div class="loading"><div class="spinner"></div>載入中</div></div>
+    </div>
+
+    <!-- 即時桌況 tab -->
+    <div id="co-courts" class="asec">
+      <div id="courts-detail-coach"><div class="loading"><div class="spinner"></div>載入中</div></div>
     </div>
   </div>
 </div>
@@ -545,60 +558,18 @@ img{display:block;}
   </div>
   <div class="scrl">
     <div class="atabs">
-      <button class="atab on" onclick="aTab('overview',this)">總覽</button>
-      <button class="atab" onclick="aTab('members',this)">學員</button>
-      <button class="atab" onclick="aTab('stats',this)">數據</button>
-      <button class="atab" onclick="aTab('weekplan',this)">本週總表</button>
+      <button class="atab on" onclick="aTab('weekplan',this)">本週總表</button>
       <button class="atab" onclick="aTab('schedule',this)">排課</button>
-      <button class="atab" onclick="aTab('history-sched',this)">歷史排課</button>
+      <button class="atab" onclick="aTab('courts',this)">即時桌況</button>
+      <button class="atab" onclick="aTab('members',this)">學員</button>
       <button class="atab" onclick="aTab('coaches',this)">薪資</button>
+      <button class="atab" onclick="aTab('stats',this)">數據</button>
+      <button class="atab" onclick="aTab('history-sched',this)">歷史排課</button>
       <button class="atab pink-tab" onclick="openRoleOvl()">⚙️ 帳號</button>
     </div>
 
-    <!-- OVERVIEW -->
-    <div id="at-overview" class="asec on">
-      <div class="srow">
-        <div class="sbox"><div class="snum" id="st-members">—</div><div class="slbl">總學員數</div></div>
-        <div class="sbox"><div class="snum">6</div><div class="slbl">球桌數</div></div>
-        <div class="sbox"><div class="snum" id="st-vip">—</div><div class="slbl">月費VIP</div></div>
-      </div>
-      <!-- Courts detail moved here -->
-      <div>
-        <div class="shdr">
-          <div class="stitle">即時桌況</div>
-          <div class="sact" onclick="resetAllCourts()">🔄 全部重置</div>
-        </div>
-        <div id="courts-detail-admin"><div class="loading"><div class="spinner"></div>載入中</div></div>
-      </div>
-      <div>
-        <div class="shdr"><div class="stitle">今日課程</div></div>
-        <div class="card" id="a-today"><div class="loading"><div class="spinner"></div>載入中</div></div>
-      </div>
-      <div>
-        <div class="shdr"><div class="stitle">今日預約清單</div></div>
-        <div class="card" id="a-bookings"><div class="loading"><div class="spinner"></div>載入中</div></div>
-      </div>
-    </div>
-
-    <!-- MEMBERS -->
-    <div id="at-members" class="asec">
-      <div style="display:flex;gap:8px;align-items:center;">
-        <input class="finput" style="flex:1;padding:10px 13px;font-size:14px;" id="msearch" placeholder="🔍 搜尋學員" oninput="filterMembers()">
-        <button class="btn btn-teal btn-sm" onclick="openDeduct()">扣點</button>
-        <button class="btn btn-pink btn-sm" onclick="openAddPts()">加點</button>
-      </div>
-      <div class="card" id="mlist"><div class="loading"><div class="spinner"></div>載入中</div></div>
-      <button class="btn btn-teal" onclick="showToast('請使用註冊功能新增學員')">＋ 新增學員</button>
-    </div>
-
-    <!-- STATS (Fix 3) -->
-    <div id="at-stats" class="asec">
-      <div class="shdr"><div class="stitle">學員帳號統計</div></div>
-      <div class="card" id="stats-member-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
-    </div>
-
-    <!-- WEEK PLAN (Fix 2) -->
-    <div id="at-weekplan" class="asec">
+    <!-- WEEK PLAN -->
+    <div id="at-weekplan" class="asec on">
       <div class="shdr">
         <div style="display:flex;align-items:center;gap:10px;">
           <button onclick="weekPlanShift(-1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">‹</button>
@@ -606,12 +577,11 @@ img{display:block;}
           <button onclick="weekPlanShift(1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">›</button>
           <button onclick="weekPlanShift(0,true)" style="background:var(--teal-l);color:var(--teal2);border:2px solid rgba(45,191,170,.3);border-radius:8px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;">本週</button>
         </div>
-        <button class="btn btn-teal btn-sm" onclick="openAddClass()">＋ 新增</button>
       </div>
       <div id="weekplan-content" style="overflow-x:auto;overflow-y:auto;max-height:70dvh;border-radius:14px;"><div class="loading"><div class="spinner"></div>載入中</div></div>
     </div>
 
-    <!-- SCHEDULE MANAGEMENT (renamed from at-schedule) -->
+    <!-- SCHEDULE -->
     <div id="at-schedule" class="asec">
       <div>
         <div class="shdr" onclick="toggleFixedSched()" style="cursor:pointer;user-select:none;">
@@ -633,7 +603,39 @@ img{display:block;}
       <div id="admin-sched-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
     </div>
 
-    <!-- HISTORY SCHEDULE (Fix 7) -->
+    <!-- MEMBERS -->
+    <div id="at-members" class="asec">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input class="finput" style="flex:1;padding:10px 13px;font-size:14px;" id="msearch" placeholder="🔍 搜尋學員" oninput="filterMembers()">
+        <button class="btn btn-teal btn-sm" onclick="openDeduct()">扣點</button>
+        <button class="btn btn-pink btn-sm" onclick="openAddPts()">加點</button>
+      </div>
+      <div class="card" id="mlist"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      <button class="btn btn-teal" onclick="showToast('請使用註冊功能新增學員')">＋ 新增學員</button>
+    </div>
+
+    <!-- COACHES / SALARY -->
+    <div id="at-coaches" class="asec">
+      <div class="shdr"><div class="stitle">教練時薪設定</div><div class="sact" onclick="saveRates()">儲存時薪</div></div>
+      <div class="card" id="rate-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      <div class="shdr" style="margin-top:4px;">
+        <div class="stitle">額外加給</div>
+        <div class="sact" onclick="openBonusModal()">＋ 新增</div>
+      </div>
+      <div class="card" id="bonus-list"><div class="empty">尚無額外加給項目</div></div>
+      <div class="shdr" style="margin-top:4px;"><div class="stitle">本月薪資結算</div><div class="sact" onclick="calcSalary()">重新計算</div></div>
+      <div class="card" id="salary-list"><div class="empty">點擊「重新計算」產生報表</div></div>
+      <div><div class="stitle" style="margin-bottom:10px;">教練時數</div>
+      <div style="display:flex;flex-direction:column;gap:10px;" id="coach-cards"></div></div>
+    </div>
+
+    <!-- STATS -->
+    <div id="at-stats" class="asec">
+      <div class="shdr"><div class="stitle">學員帳號統計</div></div>
+      <div class="card" id="stats-member-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
+    </div>
+
+    <!-- HISTORY SCHEDULE -->
     <div id="at-history-sched" class="asec">
       <div class="shdr">
         <div class="stitle">歷史排課紀錄</div>
@@ -650,22 +652,12 @@ img{display:block;}
       <div id="history-sched-content"><div class="empty">設定日期區間後點「搜尋」</div></div>
     </div>
 
-    <!-- COACHES / SALARY -->
-    <div id="at-coaches" class="asec">
-      <div class="shdr"><div class="stitle">教練時薪設定</div><div class="sact" onclick="saveRates()">儲存時薪</div></div>
-      <div class="card" id="rate-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
-
-      <div class="shdr" style="margin-top:4px;">
-        <div class="stitle">額外加給</div>
-        <div class="sact" onclick="openBonusModal()">＋ 新增</div>
-      </div>
-      <div class="card" id="bonus-list"><div class="empty">尚無額外加給項目</div></div>
-
-      <div class="shdr" style="margin-top:4px;"><div class="stitle">本月薪資結算</div><div class="sact" onclick="calcSalary()">重新計算</div></div>
-      <div class="card" id="salary-list"><div class="empty">點擊「重新計算」產生報表</div></div>
-
-      <div><div class="stitle" style="margin-bottom:10px;">教練時數</div>
-      <div style="display:flex;flex-direction:column;gap:10px;" id="coach-cards"></div></div>
+    <!-- COURTS (own tab) -->
+    <div id="at-courts" class="asec">
+      <div class="shdr"><div class="stitle">即時桌況</div><div class="sact" onclick="resetAllCourts()">🔄 全部重置</div></div>
+      <div id="courts-detail-admin"><div class="loading"><div class="spinner"></div>載入中</div></div>
+      <div class="shdr" style="margin-top:4px;"><div class="stitle">今日預約清單</div></div>
+      <div class="card" id="a-bookings"><div class="loading"><div class="spinner"></div>載入中</div></div>
     </div>
 
   </div>
@@ -1819,11 +1811,10 @@ async function confirmCancel(){
 // ═══════════════════════════════════════════
 async function setupCoach(){
   document.getElementById('co-name').textContent=`Hi，${CU.name} 👋`;
-  coachWeekOffset=0;
+  coachWeekOffset=0; coachPlanOffset=0;
   await loadCoachHours();
-  await loadCoachSchedule();
   await loadPendingConfirmations();
-  loadCoachWeekSched();
+  loadCoachPlan();
   loadCourtsDetail('courts-detail-coach', false);
 }
 
@@ -1911,44 +1902,83 @@ async function confirmAddClass(){
 async function setupAdmin(){
   loadAdminMembers();
   loadAdminBookings();
-  loadTodayAdmin();
   loadCoachCards();
   loadRateList();
-  loadCourtsDetail('courts-detail-admin', true); // admin with toggle
+  loadWeekPlan(); // default tab is now weekplan
 }
 
 async function loadAdminMembers(){
-  const s=await GET(fb('users'));
-  if(!s.exists()) return;
-  const data=s.val();
-  allMembers=Object.entries(data).filter(([,v])=>v.role==='student').map(([phone,v])=>({phone,...v}));
-  document.getElementById('st-members').textContent=allMembers.length;
-  document.getElementById('st-vip').textContent=allMembers.filter(m=>m.type==='vip').length;
+  const [us, cashSnap] = await Promise.all([GET(fb('users')), GET(fb('cashStudents'))]);
+  const data = us.exists() ? us.val() : {};
+  allMembers = Object.entries(data)
+    .filter(([,v]) => v.role === 'student')
+    .map(([phone,v]) => ({phone, ...v, cash: false}));
+
+  // Add cash students (not yet imported)
+  if(cashSnap.exists()){
+    Object.entries(cashSnap.val()).forEach(([phone, data]) => {
+      if(data.importedTo) return;
+      if(allMembers.some(m => m.phone === phone)) return;
+      const classCount = data.classes ? Object.keys(data.classes).length : 0;
+      allMembers.push({
+        phone, name: data.profile?.name || phone,
+        pts: 0, type: 'cash', ageGroup: '', cash: true, classCount
+      });
+    });
+  }
+
   renderMlist(allMembers);
-  // deduct select
-  const sel=document.getElementById('d-sel');
-  sel.innerHTML=allMembers.map(m=>`<option value="${m.phone}">${m.name}（${m.phone}）· ${m.pts}pts</option>`).join('');
+  // deduct select — only card students
+  const sel = document.getElementById('d-sel');
+  sel.innerHTML = allMembers
+    .filter(m => !m.cash)
+    .map(m => `<option value="${m.phone}">${m.name}（${m.phone}）· ${m.pts}pts</option>`)
+    .join('');
 }
 
 function renderMlist(members){
-  const el=document.getElementById('mlist');
+  const el = document.getElementById('mlist');
   if(!members.length){el.innerHTML='<div class="empty">無符合學員</div>';return;}
-  el.innerHTML=members.map(m=>`
-    <div class="mitem" onclick="quickDeduct('${m.phone}')">
-      <div class="mav ${m.type==='vip'?'p':''}">${m.name[0]}</div>
+
+  const card  = members.filter(m => !m.cash && m.type !== 'vip');
+  const vip   = members.filter(m => m.type === 'vip');
+  const cash  = members.filter(m => m.cash);
+
+  const row = m => {
+    const isCash = m.cash;
+    const isVip  = m.type === 'vip';
+    return `<div class="mitem" onclick="${isCash ? '' : `quickDeduct('${m.phone}')`}" style="${isCash?'cursor:default;background:#fffbeb;':''}">
+      <div class="mav ${isVip?'p':isCash?'':''}${isCash?' ':''}" style="${isCash?'background:#f6c90e;color:#78350f;':''}">
+        ${m.name[0]}
+      </div>
       <div class="minfo">
-        <div class="mname">${m.name}${m.type==='vip'?'<span class="viptag">月費VIP</span>':''}
-          ${m.ageGroup?`<span class="agetag">${m.ageGroup==='adult'?'成人':'青少年'}</span>`:''}
+        <div class="mname">
+          ${m.name}
+          ${isVip ? '<span class="viptag">月費</span>' : ''}
+          ${isCash ? '<span style="font-size:10px;background:#f6c90e;color:#78350f;padding:1px 7px;border-radius:8px;font-weight:800;margin-left:4px;">現金</span>' : ''}
+          ${m.ageGroup ? `<span class="agetag">${m.ageGroup==='adult'?'成人':'青少年'}</span>` : ''}
         </div>
         <div class="mphone">${m.phone}</div>
       </div>
-      <div class="mpts ${m.pts<=2?'lo':''}">${m.type==='vip'?'月費':m.pts+' pts'}</div>
-    </div>`).join('');
+      <div class="mpts ${!isCash && m.pts<=2 ? 'lo' : ''}">
+        ${isVip ? '月費' : isCash ? (m.classCount||0)+' 堂' : m.pts+' pts'}
+      </div>
+    </div>`;
+  };
+
+  const sectionHdr = (txt, color) =>
+    `<div style="font-size:10px;font-weight:800;color:${color};letter-spacing:1px;padding:8px 12px 4px;opacity:.8;">${txt}</div>`;
+
+  el.innerHTML =
+    (vip.length  ? sectionHdr('── 月費學員 ──','var(--pink)')  + vip.map(row).join('')  : '') +
+    (card.length ? sectionHdr('── 課程卡學員 ──','var(--teal)') + card.map(row).join('') : '') +
+    (cash.length ? sectionHdr('── 現金學員 ──','#b45309')       + cash.map(row).join('') : '');
 }
 
 function filterMembers(){
-  const q=document.getElementById('msearch').value.toLowerCase();
-  renderMlist(allMembers.filter(m=>m.name.includes(q)||m.phone.includes(q)));
+  const q = document.getElementById('msearch').value.toLowerCase();
+  if(!q){ renderMlist(allMembers); return; }
+  renderMlist(allMembers.filter(m => m.name.toLowerCase().includes(q) || m.phone.includes(q)));
 }
 
 async function loadAdminBookings(){
@@ -2424,17 +2454,17 @@ function sTab(id){
 }
 
 function aTab(id,el){
-  document.querySelectorAll('.asec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('#scr-admin .asec').forEach(s=>s.classList.remove('on'));
   document.getElementById('at-'+id).classList.add('on');
-  document.querySelectorAll('.atab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('#scr-admin .atab').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
   if(id==='members') loadAdminMembers();
+  if(id==='courts'){loadCourtsDetail('courts-detail-admin',true);loadAdminBookings();}
   if(id==='coaches'){loadCoachCards();loadRateList();loadBonusList();}
   if(id==='schedule') initAdminSched();
   if(id==='stats') loadAdminStats();
   if(id==='weekplan') loadWeekPlan();
   if(id==='history-sched'){
-    // Default range: this month
     const now=new Date();
     const y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0');
     const fromEl=document.getElementById('hs-from');
@@ -2442,6 +2472,95 @@ function aTab(id,el){
     if(fromEl&&!fromEl.value) fromEl.value=`${y}-${m}-01`;
     if(toEl&&!toEl.value) toEl.value=`${y}-${m}-${String(new Date(y,now.getMonth()+1,0).getDate()).padStart(2,'0')}`;
   }
+}
+
+function coTab(id,el){
+  document.querySelectorAll('#scr-coach .asec').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  document.querySelectorAll('#co-tabs .atab').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  if(id==='co-courts') loadCourtsDetail('courts-detail-coach',false);
+  if(id==='co-sched') loadCoachWeekSched();
+  if(id==='co-overview'){loadPendingConfirmations();loadCoachPlan();}
+}
+
+// ── Coach own weekly timetable (read-only) ──
+let coachPlanOffset=0;
+function coachPlanShift(delta){ coachPlanOffset+=delta; loadCoachPlan(); }
+
+async function loadCoachPlan(){
+  const el=document.getElementById('co-plan-content');
+  if(!el) return;
+  el.innerHTML='<div class="loading"><div class="spinner"></div>載入中</div>';
+  const now=new Date();
+  const monday=new Date(now);
+  monday.setDate(now.getDate()-now.getDay()+1+coachPlanOffset*7);
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(monday);d.setDate(monday.getDate()+i);days.push(d);}
+  const sun=new Date(monday); sun.setDate(monday.getDate()+6);
+  const lbl=document.getElementById('co-plan-label');
+  if(lbl) lbl.textContent=coachPlanOffset===0?'本週':`${monday.getMonth()+1}/${monday.getDate()}–${sun.getMonth()+1}/${sun.getDate()}`;
+
+  const cfsSnap=await GET(fb(`coachFixedSchedule/${CU.phone}`));
+  const coachFixed=cfsSnap.exists()?cfsSnap.val():{};
+  const todayDk=dayKey(now);
+  const DOW=['日','一','二','三','四','五','六'];
+  const timeSet=new Set();
+  const allData={};
+  for(const d of days){
+    const dk=dayKey(d);
+    const s=await GET(fb(`schedule/${dk}`));
+    const template=getFixedClassesForDate(dk)||{};
+    const merged={...template,...(s.exists()?s.val():{})};
+    allData[dk]={};
+    Object.entries(merged).forEach(([k,c])=>{
+      if(c.coach===CU.name&&c.name&&c.time&&c.time!=='彈性'){
+        allData[dk][k]=c; timeSet.add(c.time);
+      }
+    });
+    // personal fixed
+    const dow=d.getDay();
+    Object.entries(coachFixed).filter(([,e])=>e.dow===dow).forEach(([k,e])=>{
+      const key=`cf_${k}`;
+      if(!Object.values(allData[dk]).some(x=>x.time===e.time)){
+        allData[dk][key]={...e,source:'personal'}; timeSet.add(e.time);
+      }
+    });
+  }
+  const times=[...timeSet].sort();
+  if(!times.length){el.innerHTML='<div class="empty">本週無您的課程</div>';return;}
+  let html='<div class="tt-wrap"><div class="tt-grid" style="grid-template-columns:52px repeat(7,1fr);">';
+  html+=`<div class="tt-hdr" style="border-right:2px solid var(--border);"></div>`;
+  days.forEach(d=>{
+    const isToday=dayKey(d)===todayDk;
+    html+=`<div class="tt-hdr${isToday?' today':''}"><div class="tt-dname">週${DOW[d.getDay()]}</div><div class="tt-dnum">${d.getDate()}</div></div>`;
+  });
+  times.forEach((time,ti)=>{
+    const isLast=ti===times.length-1;
+    html+=`<div class="tt-time${isLast?' tt-row-last':''}"><span>${time}</span></div>`;
+    days.forEach((d,di)=>{
+      const dk=dayKey(d);
+      const cellCls=`tt-cell${isLast?' tt-row-last':''}`;
+      const entries=Object.values(allData[dk]||{}).filter(c=>c.time===time);
+      if(!entries.length){
+        html+=`<div class="${cellCls}"><div class="tt-empty"><div class="tt-dot"></div></div></div>`;
+      } else {
+        html+=`<div class="${cellCls}">`;
+        entries.forEach(c=>{
+          const typeClass=c.type||'group';
+          const badge=c.type==='group'?'團':c.type==='private'?'個':'雙';
+          const personal=c.source==='personal';
+          html+=`<div class="tt-card ${typeClass}${c.confirmed?' done':''}" style="cursor:default;">
+            <div class="tt-card-name">${c.confirmed?'✓ ':''}${c.name}${personal?'<span style="font-size:8px;background:#f6c90e;color:#78350f;padding:1px 4px;border-radius:5px;margin-left:3px;">固定</span>':''}</div>
+            <div class="tt-card-sub">${badge}${c.assignedStudents?.length?' · '+c.assignedStudents.map(s=>s.name).join('、'):''}</div>
+          </div>`;
+        });
+        html+=`</div>`;
+      }
+    });
+  });
+  html+=`</div></div>`;
+  el.innerHTML=html;
 }
 
 // ═══════════════════════════════════════════
@@ -2652,7 +2771,7 @@ async function loadWeekPlan(){
           const typeClass=(!c.coach||c.coach==='待指派')?'unassigned':c.type||'group';
           const coachName=c.coach&&c.coach!=='待指派'?c.coach:'<span style="color:var(--pink);">待指派</span>';
           const badge=c.type==='group'?'團':c.type==='private'?'個':'雙';
-          html+=`<div class="tt-card ${typeClass}${c.confirmed?' done':''}" onclick="openEditClass('${dk}','${key}')">
+          html+=`<div class="tt-card ${typeClass}${c.confirmed?' done':''}" style="cursor:default;">
             <div class="tt-card-name">${c.confirmed?'✓ ':''} ${c.name}</div>
             <div class="tt-card-sub">${coachName} · ${badge}</div>
             ${c.assignedStudents?.length?`<div class="tt-card-sub">👤 ${c.assignedStudents.map(s=>s.name).join('、')}</div>`:''}
