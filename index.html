@@ -2285,12 +2285,12 @@ async function confirmAddPts(){
 async function resetAllCourts(){
   if(!confirm('確定要將全部 6 張桌子重置為「可用」狀態嗎？\n這不會影響預約紀錄。')) return;
   try{
-    const upd={};
-    for(let i=1;i<=6;i++) upd[`courts/table${i}/status`]='available';
-    await UPD(fb(''),upd);
+    const updates={};
+    for(let i=1;i<=6;i++) updates[`table${i}/status`]='available';
+    await UPD(fb('courts'),updates);
     showToast('✓ 全部桌子已重置為可用');
-    loadCourts('a');
-    loadCourts('admin');
+    loadCourtsDetail('courts-detail-admin',true);
+    loadCourtsDetail('courts-detail-coach',false);
   }catch(e){showToast('重置失敗','err');console.error(e);}
 }
 function openRoleOvl(){
