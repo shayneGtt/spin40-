@@ -1717,21 +1717,26 @@ function openBook(n){
 }
 
 async function confirmBook(){
-  const startH=document.getElementById('book-start').value;
-  const endH=document.getElementById('book-end').value;
+  const startVal=document.getElementById('book-start').value; // "14:00"
+  const endVal=document.getElementById('book-end').value;
   const renter=document.getElementById('book-renter')?.value.trim()||'';
   const err=document.getElementById('book-err');
   err.textContent='';
-  if(startH>=endH){err.textContent='結束時間必須晚於開始時間';return;}
-  const slot=`${startH} – ${endH}`;
+  if(startVal>=endVal){err.textContent='結束時間必須晚於開始時間';return;}
+  const slot=`${startVal} – ${endVal}`;
   const displayName=renter||(CU?CU.name:'現場客人');
   const userPhone=CU?CU.phone:'guest';
+  const today=dayKey(new Date());
   try{
-    const bkey=`${dayKey(new Date())}_t${bookTbl}_${Date.now()}`;
-    await SET(fb(`bookings/${bkey}`),{user:userPhone,name:displayName,table:bookTbl,slot,type:'rent',pts:0,ts:Date.now()});
-    await UPD(fb(`courts/table${bookTbl}`),{status:'occupied'});
+    const bkey=`${today}_t${bookTbl}_${Date.now()}`;
+    await SET(fb(`bookings/${bkey}`),{
+      user:userPhone, name:displayName, table:bookTbl,
+      slot, startTime:startVal, endTime:endVal,
+      dateKey:today, type:'rent', pts:0, ts:Date.now()
+    });
+    // Do NOT set court status here — loadCourtsDetail computes it from current time
     closeModal('book-modal');
-    showToast(`✓ 桌 ${bookTbl} ${slot} 租借完成`);
+    showToast(`✓ 桌 ${bookTbl} ${slot} 已預約`);
     if(CU?.role==='student') loadMyBookings();
     loadCourtsDetail('courts-detail-coach', false);
     loadCourtsDetail('courts-detail-admin', true);
@@ -1798,8 +1803,7 @@ async function confirmCancel(){
     }
     // remove booking
     await REMOVE(fb(`bookings/${cancelKey_}`));
-    // free court
-    await UPD(fb(`courts/table${cancelTbl_}`),{status:'available'});
+    // Court status is time-computed — no manual reset needed
     closeModal('cancel-modal');
     showToast(`✓ 已取消預約，退回 ${cancelPts_} 點`);
     loadMyBookings();
@@ -2012,14 +2016,11 @@ async function adminCancelBooking(key, pts, tbl, userPhone, userName){
         await PUSH(fb(`history/${userPhone}`),{label:`管理員取消預約桌${tbl}（退點）`,delta:pts,ts:Date.now()});
       }
     }
-    // remove booking
     await REMOVE(fb(`bookings/${key}`));
-    // free the court
-    await UPD(fb(`courts/table${tbl}`),{status:'available'});
+    // Court status is time-computed — no manual reset needed
     showToast(`✓ 已取消 ${userName} 的預約，退回 ${pts} 點`);
     loadAdminBookings();
-    loadCourts('a');
-    loadCourts('admin');
+    loadCourtsDetail('courts-detail-admin', true);
   }catch(e){showToast('取消失敗','err');console.error(e);}
 }
 
@@ -2865,34 +2866,75 @@ function loadCourtsDetail(elementId='courts-detail-admin', isAdmin=true){
   if(!el) return;
   ONVAL(fb('courts'),async snap=>{
     if(!snap.exists()){el.innerHTML='';return;}
-    const todaySched=await GET(fb(`schedule/${dayKey(new Date())}`));
-    const template=getFixedClassesForDate(dayKey(new Date()))||{};
+    const now=new Date();
+    const todayDk=dayKey(now);
+    const nowMin=now.getHours()*60+now.getMinutes(); // minutes since midnight
+
+    // Helper: parse "HH:MM" → minutes since midnight
+    const toMin=t=>{ if(!t) return 0; const [h,m]=(t||'').split(':'); return parseInt(h)*60+(parseInt(m)||0); };
+
+    // Today's course schedule (for table assignment info)
+    const todaySched=await GET(fb(`schedule/${todayDk}`));
+    const template=getFixedClassesForDate(todayDk)||{};
     const merged={...template,...(todaySched.exists()?todaySched.val():{})};
     const tableMap={};
-    Object.values(merged).forEach(c=>{ if(c.table) tableMap[c.table]={...c}; });
+    Object.values(merged).forEach(c=>{ if(c.table) tableMap[c.table]=c; });
+
+    // Today's bookings — check which ones are currently active by time
     const bookSnap=await GET(fb('bookings'));
-    const rentMap={};
+    // rentMap[tableNum] = active booking (if current time is within slot)
+    // upcomingMap[tableNum] = next upcoming booking today
+    const rentMap={};    // currently occupied by booking
+    const upcomingMap={}; // upcoming booking today (not yet started)
     if(bookSnap.exists()){
       Object.values(bookSnap.val())
-        .filter(b=>dayKey(new Date(b.ts))===dayKey(new Date()))
-        .forEach(b=>{ if(b.table) rentMap[b.table]=b; });
+        .filter(b=>b.dateKey===todayDk && b.table)
+        .forEach(b=>{
+          const start=toMin(b.startTime);
+          const end=toMin(b.endTime);
+          const tbl=b.table;
+          if(nowMin>=start && nowMin<end){
+            // Currently active
+            rentMap[tbl]=b;
+          } else if(nowMin<start){
+            // Upcoming — keep earliest
+            if(!upcomingMap[tbl]||start<toMin(upcomingMap[tbl].startTime)){
+              upcomingMap[tbl]=b;
+            }
+          }
+        });
     }
 
     const courts=snap.val();
     el.innerHTML=Object.entries(courts).sort().map(([k,v])=>{
       const num=parseInt(k.replace('table',''));
-      const avail=v.status==='available';
+      // Court is occupied if: manual status=occupied OR active booking right now
+      const manualOccupied=v.status==='occupied';
+      const bookingOccupied=!!rentMap[num];
+      const avail=!manualOccupied && !bookingOccupied;
+
       const cls=tableMap[num];
-      const rent=rentMap[num];
+      const activeRent=rentMap[num];
+      const upcoming=upcomingMap[num];
+
       let info='';
-      if(cls&&!avail){
+      if(bookingOccupied){
+        info=`<div style="font-size:12px;font-weight:700;margin-top:4px;color:var(--pink);">🔴 場地租借中</div>
+          <div style="font-size:11px;color:var(--gray);">${activeRent.name} · ${activeRent.slot||''}</div>`;
+      } else if(cls && manualOccupied){
         info=`<div style="font-size:12px;font-weight:700;margin-top:4px;">${cls.name}</div>
           <div style="font-size:11px;color:var(--gray);">教練：${cls.coach||'—'}</div>
           ${cls.assignedStudents?.length?`<div style="font-size:11px;color:var(--gray);">學員：${cls.assignedStudents.map(s=>s.name).join('、')}</div>`:''}`;
-      } else if(rent&&!avail){
-        info=`<div style="font-size:12px;font-weight:700;margin-top:4px;">場地租借</div>
-          <div style="font-size:11px;color:var(--gray);">${rent.name} · ${rent.slot||''}</div>`;
+      } else if(manualOccupied){
+        info=`<div style="font-size:12px;color:var(--gray);margin-top:4px;">手動標記佔用</div>`;
+      } else if(upcoming){
+        // Show upcoming booking as a hint while still available
+        const startM=toMin(upcoming.startTime);
+        const diffMin=startM-nowMin;
+        const diffTxt=diffMin<60?`${diffMin} 分鐘後`:`${Math.floor(diffMin/60)} 小時後`;
+        info=`<div style="font-size:11px;color:#b45309;margin-top:4px;">📅 ${diffTxt}預約：${upcoming.name} · ${upcoming.slot}</div>`;
       }
+
       const toggleBtn=isAdmin
         ?`<button class="cancel-btn" style="${avail?'background:var(--pink-l);color:var(--pink);border-color:rgba(240,80,138,.3);':'background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);'}"
             onclick="adminToggleCourt('${k}','${v.status}')">${avail?'標為佔用':'標為空閒'}</button>`
@@ -2900,11 +2942,12 @@ function loadCourtsDetail(elementId='courts-detail-admin', isAdmin=true){
           ?`<button class="cancel-btn" style="background:var(--teal);color:#fff;border-color:var(--teal);"
               onclick="openBook(${num})">租借</button>`
           :`<span style="font-size:11px;font-weight:700;color:var(--pink);">使用中</span>`;
+
       return `<div class="card" style="margin-bottom:8px;padding:14px;border-left:4px solid ${avail?'var(--teal)':'var(--pink)'};">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
           <div style="flex:1;">
             <div style="font-size:18px;font-weight:900;margin-bottom:2px;">桌 ${num}</div>
-            ${info||`<div style="font-size:12px;color:var(--gray);">${avail?'空閒，可使用':'使用中'}</div>`}
+            ${info||`<div style="font-size:12px;color:var(--gray);">空閒，可使用</div>`}
           </div>
           ${toggleBtn}
         </div>
