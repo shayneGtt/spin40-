@@ -457,7 +457,13 @@ img{display:block;}
           <button class="ftab" id="ft-flex" onclick="filterSched('flex',this)">個人/雙人</button>
         </div>
       </div>
-      <div><div class="dstrip" id="sched-dstrip"></div></div>
+      <div>
+        <div style="display:flex;gap:8px;margin-bottom:6px;">
+          <button class="ftab on" id="sw-week0" onclick="setSchedWeek(0,this)">本週</button>
+          <button class="ftab" id="sw-week1" onclick="setSchedWeek(1,this)">下週</button>
+        </div>
+        <div class="dstrip" id="sched-dstrip"></div>
+      </div>
       <div>
         <div class="shdr"><div class="stitle" id="sched-day-title">今日課程</div></div>
         <div class="card" id="sched-day-classes"><div class="loading"><div class="spinner"></div>載入中</div></div>
@@ -550,10 +556,20 @@ img{display:block;}
           <button onclick="coachWeekShift(1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">›</button>
         </div>
         <div style="display:flex;gap:6px;">
-          <div class="sact" onclick="openCoachFixedModal()">📋</div>
           <div class="sact" onclick="openAddClass()">＋ 課程</div>
           <div class="sact" style="color:var(--teal2);background:var(--teal-l);" onclick="openAddShift()">＋ 排班</div>
         </div>
+      </div>
+      <!-- 固定課表入口 -->
+      <div onclick="openCoachFixedModal()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border-radius:10px;margin-bottom:8px;cursor:pointer;border:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:18px;">📋</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;">我的固定課表</div>
+            <div style="font-size:11px;color:var(--gray);">設定每週固定授課時段</div>
+          </div>
+        </div>
+        <span style="color:var(--gray);font-size:16px;">›</span>
       </div>
       <div id="co-week-sched"><div class="loading"><div class="spinner"></div>載入中</div></div>
     </div>
@@ -1048,6 +1064,37 @@ img{display:block;}
   </div>
 </div>
 
+<!-- Edit single day of personal fixed class -->
+<div class="mback" id="epfd-modal" onclick="closeModal('epfd-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">編輯單堂固定課</div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:14px;" id="epfd-label"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;">
+      <div>
+        <div class="flabel">時間</div>
+        <select class="fsel" id="epfd-time">
+          <option>08:00</option><option>09:00</option><option>10:00</option>
+          <option>11:00</option><option>12:00</option><option>13:00</option>
+          <option>13:30</option><option>14:00</option><option>15:00</option>
+          <option>15:30</option><option>16:00</option><option>16:30</option>
+          <option>17:00</option><option>18:00</option><option>19:00</option><option>20:00</option>
+        </select>
+      </div>
+      <div>
+        <div class="flabel">人數上限</div>
+        <input class="finput" type="number" id="epfd-seats" value="1" min="1" max="10">
+      </div>
+    </div>
+    <div class="errmsg" id="epfd-err"></div>
+    <div class="brow" style="flex-wrap:wrap;gap:8px;">
+      <button class="btn btn-pink" style="flex:1;" onclick="deletePersonalFixedDay()">刪除此堂</button>
+      <button class="btn btn-gray" style="flex:1;" onclick="closeModal('epfd-modal')">取消</button>
+      <button class="btn btn-teal" style="flex:1;" onclick="confirmPersonalFixedDayEdit()">儲存</button>
+    </div>
+  </div>
+</div>
+
 <!-- Cancel booking confirm -->
 <div class="mback" id="cancel-modal" onclick="closeModal('cancel-modal')">
   <div class="msheet" onclick="event.stopPropagation()">
@@ -1390,6 +1437,7 @@ let cancelKey_ = null;
 let cancelPts_ = 0;
 let cancelTbl_ = null;
 let schedFilter = 'all';
+let schedWeekOffset = 0;
 let coachWeekOffset = 0;
 let _scheduleListenerActive = false; // prevent duplicate onValue listeners
 
@@ -1879,9 +1927,8 @@ function getFixedClassesForDate(dateKey){
     };
   });
 
-  // Always add flex placeholders
-  classes[`fixed_${idx++}`]={time:'彈性',name:'個人班（需預約教練）',coach:'待指派',type:'private',ageGroup:'flex',seats:1,enrolled:0};
-  classes[`fixed_${idx++}`]={time:'彈性',name:'雙人班（需預約教練）',coach:'待指派',type:'duo',ageGroup:'flex',seats:2,enrolled:0};
+  // Always add flex placeholder (merged)
+  classes[`fixed_${idx++}`]={time:'彈性',name:'個人/雙人班（需預約教練）',coach:'待指派',type:'private',ageGroup:'flex',seats:2,enrolled:0};
   return Object.keys(classes).length>2?classes:null;
 }
 
@@ -2287,11 +2334,15 @@ async function loadCoachSchedule(){
 
     // Coach's personal fixed schedule for this day-of-week
     Object.entries(coachFixed).filter(([,e])=>e.dow===dow).forEach(([key,e])=>{
-      // Only show if not already overridden by a real schedule entry
-      const alreadyIn=allItems.some(x=>x.dateKey===k&&x.time===e.time&&x.coach===CU.name);
-      if(!alreadyIn) allItems.push({...e,dateKey:k,classKey:`cf_${key}`,source:'personal',enrolled:0});
+      // Only show if not already overridden by a real schedule entry (match by classKey or time)
+      const cfKey=`cf_${key}`;
+      const alreadyIn=allItems.some(x=>x.dateKey===k&&(x.classKey===cfKey||(x.time===e.time&&x.coach===CU.name)));
+      if(!alreadyIn) allItems.push({...e,dateKey:k,classKey:cfKey,source:'personal',enrolled:0});
     });
   }
+
+  // Filter out single-day deletions
+  allItems=allItems.filter(x=>!x._del);
 
   if(!allItems.length){el.innerHTML='<div class="empty">本週尚無排課</div>';return;}
   allItems.sort((a,b)=>a.dateKey.localeCompare(b.dateKey)||a.time.localeCompare(b.time));
@@ -2299,10 +2350,13 @@ async function loadCoachSchedule(){
     <div class="si">
       <div class="si-time">${fmtDay(c.dateKey)}<br>${c.time}</div>
       <div class="si-info">
-        <div class="si-name">${c.name}${c.source==='personal'?'<span style="font-size:9px;background:var(--amber-l);color:var(--amber);padding:2px 6px;border-radius:8px;margin-left:6px;">個人固定</span>':''}</div>
+        <div class="si-name">${c.name}${c.source==='personal'||c.source==='personal_override'?'<span style="font-size:9px;background:var(--amber-l);color:var(--amber);padding:2px 6px;border-radius:8px;margin-left:6px;">個人固定</span>':''}</div>
         <div class="si-sub">${c.enrolled||0}/${c.seats}人${c.table?` · 桌${c.table}`:''}</div>
       </div>
-      <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':'個'}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':'個'}</div>
+        ${(c.source==='personal'||c.source==='personal_override')?`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;" onclick="openEditPersonalFixedDay('${c.classKey}','${c.dateKey}','${(c.name||'').replace(/'/g,'&#39;')}','${c.time}',${c.seats||1})">編輯</button>`:''}
+      </div>
     </div>`).join('');
 }
 
@@ -3129,6 +3183,9 @@ function sTab(id){
   if(id==='s-book'){loadCourts('s');loadMyBookings();}
   if(id==='s-profile'){refreshPts();loadHistory();}
   if(id==='s-schedule'){
+    schedWeekOffset=0;
+    document.getElementById('sw-week0')?.classList.add('on');
+    document.getElementById('sw-week1')?.classList.remove('on');
     buildSchedDstrip();
     loadSchedDayClasses(dayKey(new Date()),'今日課程');
   }
@@ -3400,8 +3457,12 @@ async function loadWeekPlan(){
   for(const d of days){
     const dk=dayKey(d);
     const s=await GET(fb(`schedule/${dk}`));
+    const actual=s.exists()?s.val():{};
     const template=getFixedClassesForDate(dk)||{};
-    allData[dk]={...template,...(s.exists()?s.val():{})};
+    const merged={...template,...actual};
+    // Filter out _del markers (single-day deletions of fixed classes)
+    Object.keys(merged).forEach(k=>{ if(merged[k]._del) delete merged[k]; });
+    allData[dk]=merged;
   }
 
   const todayDk=dayKey(now);
@@ -3852,6 +3913,8 @@ async function loadAdminSchedDay(dateKey, label){
   // fixed template as base, Firebase overrides (but don't show flex fixed classes in admin view)
   const fixedFiltered=Object.fromEntries(Object.entries(template).filter(([,v])=>v.ageGroup!=='flex'));
   classData={...fixedFiltered,...(s.exists()?s.val():{})};
+  // Filter out _del markers
+  Object.keys(classData).forEach(k=>{ if(classData[k]._del) delete classData[k]; });
 
   const entries=Object.entries(classData).sort(([,a],[,b])=>a.time.localeCompare(b.time));
 
@@ -4364,20 +4427,23 @@ async function deleteClassFromModal(){
 async function deleteClass(dateKey, classKey){
   if(!confirm('確定要刪除這堂課嗎？')) return;
   try{
-    // Get class data before deleting
     const cs=await GET(fb(`schedule/${dateKey}/${classKey}`));
-    if(cs.exists()){
-      const c=cs.val();
-      // If class was confirmed, reverse coach hours
-      if(c.confirmed && c.coach){
-        // Find coach phone
-        const us=await GET(fb('users'));
-        // Hours are now managed via coachShifts — no reversal needed here
-      }
+    const isFixedKey=classKey.startsWith('fixed_');
+
+    if(isFixedKey){
+      // Fixed class: write a _del marker so weekplan knows it's deleted
+      const orig=cs.exists()?cs.val():{name:'',time:'',type:'group',seats:5};
+      await SET(fb(`schedule/${dateKey}/${classKey}`),{...orig,_del:true});
+    } else {
+      await REMOVE(fb(`schedule/${dateKey}/${classKey}`));
     }
-    await REMOVE(fb(`schedule/${dateKey}/${classKey}`));
+
     showToast('✓ 課程已刪除');
-    loadAdminSchedDay(dateKey, document.getElementById('admin-sched-day-title').textContent);
+    closeModal('add-class-modal');
+    loadAdminSchedDay(dateKey, document.getElementById('admin-sched-day-title')?.textContent||'今日課程');
+    // Refresh weekplan if visible
+    const wpEl=document.getElementById('weekplan-content');
+    if(wpEl) loadWeekPlan();
   }catch(e){showToast('刪除失敗','err');console.error(e);}
 }
 
@@ -4389,16 +4455,27 @@ function fmtDt(ts){const d=new Date(ts);return `${d.getFullYear()}-${String(d.ge
 const dnames=['日','一','二','三','四','五','六'];
 function fmtDay(k){const d=new Date(`${k.slice(0,4)}-${k.slice(4,6)}-${k.slice(6,8)}`);return `週${dnames[d.getDay()]}`;}
 
+function setSchedWeek(offset, el){
+  schedWeekOffset=offset;
+  document.querySelectorAll('#sw-week0,#sw-week1').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  buildSchedDstrip();
+  // Auto-select first chip of the new week and load its classes
+  const firstChip=document.querySelector('#sched-dstrip .dchip');
+  if(firstChip) firstChip.click();
+}
+
 function buildSchedDstrip(){
   const el=document.getElementById('sched-dstrip');
-  if(!el||el.children.length>0) return;
+  if(!el) return;
   el.innerHTML='';
   const now=new Date();
   const days='日一二三四五六';
-  for(let i=0;i<14;i++){
+  const startDay=schedWeekOffset*7;
+  for(let i=startDay;i<startDay+7;i++){
     const d=new Date(now); d.setDate(now.getDate()+i);
     const chip=document.createElement('button');
-    chip.className='dchip'+(i===0?' on':'');
+    chip.className='dchip'+(i===startDay?' on':'');
     chip.innerHTML=`<span class="dd">週${days[d.getDay()]}</span><span class="dn">${d.getDate()}</span>`;
     const dk=dayKey(d);
     const label=`週${days[d.getDay()]} ${d.getDate()}日`;
@@ -4474,9 +4551,13 @@ async function loadCoachWeekSched(){
 
     // Add personal fixed if not already present
     Object.entries(coachFixed).filter(([,e])=>e.dow===dow).forEach(([key,e])=>{
-      const dup=items.some(([,x])=>x.time===e.time);
-      if(!dup) items.push([`cf_${key}`,{...e,source:'personal',enrolled:0}]);
+      const cfKey=`cf_${key}`;
+      const dup=items.some(([k2,x])=>k2===cfKey||(x.time===e.time));
+      if(!dup) items.push([cfKey,{...e,source:'personal',enrolled:0}]);
     });
+
+    // Filter out single-day deletions
+    items=items.filter(([,c])=>!c._del);
 
     items.sort(([,a],[,b])=>a.time.localeCompare(b.time));
     if(!items.length) continue;
@@ -4490,7 +4571,10 @@ async function loadCoachWeekSched(){
         ${items.map(([key,c])=>{
           const isFixed=key.startsWith('fixed_');
           const isPersonal=key.startsWith('cf_');
-          const editBtn=!isPersonal
+          const editBtn=isPersonal
+            ?`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
+                onclick="openEditPersonalFixedDay('${key}','${dk}','${(c.name||'').replace(/'/g,'&#39;')}','${c.time}',${c.seats||1})">編輯</button>`
+            :!isFixed
             ?`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
                 onclick="openEditClass('${dk}','${key}')">編輯</button>`
             :'';
@@ -4627,6 +4711,50 @@ async function confirmCoachFixedForm(){
     // Also reload weekly schedule to reflect changes
     loadCoachSchedule();
   }catch(e){err.textContent='儲存失敗';console.error(e);}
+}
+
+let epfdState={classKey:'',dateKey:''};
+
+function openEditPersonalFixedDay(classKey,dateKey,name,time,seats){
+  epfdState={classKey,dateKey};
+  const mm=dateKey.slice(4,6), dd=dateKey.slice(6,8);
+  document.getElementById('epfd-label').textContent=`${name} · ${mm}/${dd}（僅修改此堂，不影響其他週）`;
+  document.getElementById('epfd-time').value=time;
+  document.getElementById('epfd-seats').value=seats||1;
+  document.getElementById('epfd-err').textContent='';
+  document.getElementById('epfd-modal').classList.add('on');
+}
+
+async function confirmPersonalFixedDayEdit(){
+  const {classKey,dateKey}=epfdState;
+  const time=document.getElementById('epfd-time').value;
+  const seats=parseInt(document.getElementById('epfd-seats').value)||1;
+  const rawKey=classKey.replace(/^cf_/,'');
+  try{
+    const s=await GET(fb(`coachFixedSchedule/${CU.phone}/${rawKey}`));
+    if(!s.exists()){document.getElementById('epfd-err').textContent='找不到課程';return;}
+    const orig=s.val();
+    await SET(fb(`schedule/${dateKey}/${classKey}`),{...orig,time,seats,coach:CU.name,source:'personal_override'});
+    closeModal('epfd-modal');
+    showToast('✓ 本堂已更新');
+    loadCoachSchedule();
+    loadCoachWeekSched();
+  }catch(e){document.getElementById('epfd-err').textContent='儲存失敗';console.error(e);}
+}
+
+async function deletePersonalFixedDay(){
+  if(!confirm('確定刪除此單堂？不影響其他週的固定課')) return;
+  const {classKey,dateKey}=epfdState;
+  const rawKey=classKey.replace(/^cf_/,'');
+  try{
+    const s=await GET(fb(`coachFixedSchedule/${CU.phone}/${rawKey}`));
+    const orig=s.exists()?s.val():{};
+    await SET(fb(`schedule/${dateKey}/${classKey}`),{...orig,coach:CU.name,_del:true});
+    closeModal('epfd-modal');
+    showToast('✓ 已刪除本堂');
+    loadCoachSchedule();
+    loadCoachWeekSched();
+  }catch(e){showToast('刪除失敗','err');console.error(e);}
 }
 </script>
 </body>
