@@ -10,13 +10,18 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, set, get, onValue, push, update, remove }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential, createUserWithEmailAndPassword }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   const cfg = {
     apiKey:"AIzaSyD2UAYUcp_flhFukih510J7jJ6stm_UMZQ",
     databaseURL:"https://gym-tt-default-rtdb.asia-southeast1.firebasedatabase.app",
+    authDomain:"gym-tt.firebaseapp.com",
   };
   const app = initializeApp(cfg);
   const db  = getDatabase(app);
+  const auth = getAuth(app);
   window._fb = { db, ref, set, get, onValue, push, update, remove };
+  window._auth = { auth, signInWithEmailAndPassword, signOut, onAuthStateChanged, updatePassword, EmailAuthProvider, reauthenticateWithCredential, createUserWithEmailAndPassword };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 
@@ -392,7 +397,16 @@ img{display:block;}
 <div id="scr-student" class="screen">
   <div class="topbar">
     <div><div class="tb-title" id="s-greeting">Hi 👋</div><div class="tb-sub" id="s-role-sub">學員</div></div>
-    <div class="avatar av-teal" id="s-av" onclick="sTab('s-profile')">？</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <a href="https://line.me/ti/p/@824gaejz" target="_blank" rel="noopener"
+        style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:#06C755;border-radius:50%;text-decoration:none;flex-shrink:0;"
+        title="LINE 客服">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.477 2 2 6.037 2 11c0 2.756 1.338 5.217 3.445 6.92-.152.554-.979 3.368-.979 3.368s-.034.18.096.248c.13.068.274-.014.274-.014s3.162-1.902 3.606-2.17c1.142.29 2.34.448 3.558.448 5.523 0 10-4.037 10-9S17.523 2 12 2zm-4.5 12.5H6v-5h1.5v5zm2.5 0H8.5V9.5H10v5zm2.5 0H11V9.5h1.5v5zm2.5 0h-1V9.5H15v5h-1.5V14.5z"/>
+        </svg>
+      </a>
+      <div class="avatar av-teal" id="s-av" onclick="sTab('s-profile')">？</div>
+    </div>
   </div>
   <div class="scrl">
     <!-- HOME -->
@@ -477,7 +491,7 @@ img{display:block;}
         <div class="card" id="history"><div class="loading"><div class="spinner"></div>載入中</div></div>
       </div>
       <div class="card">
-        <div class="setting" onclick="showToast('功能開發中')"><div class="sl"><span class="si-icon">🔒</span><span class="st">修改密碼</span></div><span>›</span></div>
+        <div class="setting" onclick="openChangePw()"><div class="sl"><span class="si-icon">🔒</span><span class="st">修改密碼</span></div><span>›</span></div>
         <div class="setting" onclick="doLogout()"><div class="sl"><span class="si-icon">🚪</span><span class="st" style="color:var(--pink)">登出</span></div><span>›</span></div>
       </div>
     </div>
@@ -535,9 +549,10 @@ img{display:block;}
           <span id="co-week-label" style="font-size:12px;font-weight:700;color:var(--gray);min-width:80px;text-align:center;"></span>
           <button onclick="coachWeekShift(1)" style="background:var(--bg);border:2px solid var(--border);border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;">›</button>
         </div>
-        <div style="display:flex;gap:8px;">
-          <div class="sact" onclick="openCoachFixedModal()">📋 固定課表</div>
-          <div class="sact" onclick="openAddClass()">＋ 新增</div>
+        <div style="display:flex;gap:6px;">
+          <div class="sact" onclick="openCoachFixedModal()">📋</div>
+          <div class="sact" onclick="openAddClass()">＋ 課程</div>
+          <div class="sact" style="color:var(--teal2);background:var(--teal-l);" onclick="openAddShift()">＋ 排班</div>
         </div>
       </div>
       <div id="co-week-sched"><div class="loading"><div class="spinner"></div>載入中</div></div>
@@ -616,17 +631,21 @@ img{display:block;}
 
     <!-- COACHES / SALARY -->
     <div id="at-coaches" class="asec">
-      <div class="shdr"><div class="stitle">教練時薪設定</div><div class="sact" onclick="saveRates()">儲存時薪</div></div>
+      <div class="shdr"><div class="stitle">時薪設定</div><div class="sact" onclick="saveRates()">儲存</div></div>
       <div class="card" id="rate-list"><div class="loading"><div class="spinner"></div>載入中</div></div>
-      <div class="shdr" style="margin-top:4px;">
+
+      <div style="border-top:2px solid var(--border);margin:12px 0 8px;"></div>
+
+      <div class="shdr">
         <div class="stitle">額外加給</div>
         <div class="sact" onclick="openBonusModal()">＋ 新增</div>
       </div>
       <div class="card" id="bonus-list"><div class="empty">尚無額外加給項目</div></div>
-      <div class="shdr" style="margin-top:4px;"><div class="stitle">本月薪資結算</div><div class="sact" onclick="calcSalary()">重新計算</div></div>
+
+      <div style="border-top:2px solid var(--border);margin:12px 0 8px;"></div>
+
+      <div class="shdr"><div class="stitle">本月薪資結算</div><div class="sact" onclick="calcSalary()">重新計算</div></div>
       <div class="card" id="salary-list"><div class="empty">點擊「重新計算」產生報表</div></div>
-      <div><div class="stitle" style="margin-bottom:10px;">教練時數</div>
-      <div style="display:flex;flex-direction:column;gap:10px;" id="coach-cards"></div></div>
     </div>
 
     <!-- STATS -->
@@ -1145,6 +1164,124 @@ img{display:block;}
   </div>
 </div>
 
+<!-- Shift Follow-up Prompt -->
+<div class="mback" id="shift-followup-modal" onclick="closeModal('shift-followup-modal')">
+  <div class="msheet" onclick="event.stopPropagation()" style="max-height:auto;">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="shift-followup-title">📋 下一步：新增教練排班</div>
+    <div style="font-size:13px;color:var(--gray);margin-bottom:16px;line-height:1.6;" id="shift-followup-desc"></div>
+    <div class="brow">
+      <button class="btn btn-gray" style="flex:1;" onclick="closeModal('shift-followup-modal')">略過</button>
+      <button class="btn btn-teal" style="flex:1;" onclick="openShiftFromClass()">新增排班</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Add Shift Modal -->
+<div class="mback" id="admin-shift-modal" onclick="closeModal('admin-shift-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="admin-shift-title">幫教練新增排班</div>
+    <div style="margin-bottom:12px;">
+      <div class="flabel">選擇教練</div>
+      <select class="fsel" id="admin-shift-coach" onchange="loadAdminShiftClasses()">
+        <option value="">— 選擇教練 —</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div class="flabel">日期</div>
+      <input class="finput" type="date" id="admin-shift-date" onchange="loadAdminShiftClasses()">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <div class="flabel">開始時間</div>
+        <input class="finput" type="time" id="admin-shift-start" step="1800">
+      </div>
+      <div>
+        <div class="flabel">結束時間</div>
+        <input class="finput" type="time" id="admin-shift-end" step="1800">
+      </div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div class="flabel" style="margin-bottom:6px;">關聯課程（可勾選多堂）</div>
+      <div id="admin-shift-class-list" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;">
+        <div class="empty" style="font-size:12px;">請先選擇教練和日期</div>
+      </div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div class="flabel">備註（選填）</div>
+      <input class="finput" type="text" id="admin-shift-note" placeholder="例：代課、活動">
+    </div>
+    <div class="errmsg" id="admin-shift-err"></div>
+    <div class="brow">
+      <button class="btn btn-gray" style="flex:1;" onclick="closeModal('admin-shift-modal')">取消</button>
+      <button class="btn btn-teal" style="flex:1;" onclick="confirmAdminShift()">儲存排班</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Shift Modal -->
+<div class="mback" id="shift-modal" onclick="closeModal('shift-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="shift-modal-title">＋ 新增排班</div>
+    <div style="margin-bottom:12px;">
+      <div class="flabel">日期</div>
+      <input class="finput" type="date" id="shift-date">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <div class="flabel">開始時間</div>
+        <input class="finput" type="time" id="shift-start" step="1800">
+      </div>
+      <div>
+        <div class="flabel">結束時間</div>
+        <input class="finput" type="time" id="shift-end" step="1800">
+      </div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div class="flabel" style="margin-bottom:6px;">關聯課程（可勾選多堂）</div>
+      <div id="shift-class-list" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;">
+        <div class="empty" style="font-size:12px;">載入中…</div>
+      </div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <div class="flabel">備註（選填）</div>
+      <input class="finput" type="text" id="shift-note" placeholder="例：代課、活動">
+    </div>
+    <div class="errmsg" id="shift-err"></div>
+    <div class="brow">
+      <button class="btn btn-gray" style="flex:1;" onclick="closeModal('shift-modal')">取消</button>
+      <button class="btn btn-teal" style="flex:1;" onclick="confirmShift()" id="shift-confirm-btn">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="mback" id="changepw-modal" onclick="closeModal('changepw-modal')">
+  <div class="msheet" onclick="event.stopPropagation()">
+    <div class="mhandle"></div>
+    <div class="mtitle">🔒 修改密碼</div>
+    <div style="margin-bottom:13px;">
+      <div class="flabel">目前密碼</div>
+      <input class="finput" type="password" id="cpw-old" placeholder="輸入目前的密碼">
+    </div>
+    <div style="margin-bottom:13px;">
+      <div class="flabel">新密碼</div>
+      <input class="finput" type="password" id="cpw-new" placeholder="至少6位數">
+    </div>
+    <div style="margin-bottom:13px;">
+      <div class="flabel">確認新密碼</div>
+      <input class="finput" type="password" id="cpw-new2" placeholder="再輸入一次新密碼">
+    </div>
+    <div class="errmsg" id="cpw-err"></div>
+    <div class="brow">
+      <button class="btn btn-gray" onclick="closeModal('changepw-modal')">取消</button>
+      <button class="btn btn-teal" onclick="confirmChangePw()">確認修改</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1152,14 +1289,27 @@ img{display:block;}
 //  FIREBASE INIT
 // ═══════════════════════════════════════════
 let DB,REF,SET,GET,ONVAL,PUSH,UPD,REMOVE;
+let AUTH,SIGNIN,SIGNOUT,ON_AUTH_STATE;
 window.addEventListener('fb-ready',()=>{
   const f=window._fb;
   DB=f.db;REF=f.ref;SET=f.set;GET=f.get;ONVAL=f.onValue;PUSH=f.push;UPD=f.update;REMOVE=f.remove;
-  seedAdmin(); seedCourts(); seedSchedule();
-  loadFixedCoachCache();
-  loadFixedScheduleCache();
-  // Auto-restore session if previously logged in
-  tryRestoreSession();
+  const a=window._auth;
+  AUTH=a.auth;SIGNIN=a.signInWithEmailAndPassword;SIGNOUT=a.signOut;ON_AUTH_STATE=a.onAuthStateChanged;
+  // Auto-restore via Firebase Auth state
+  ON_AUTH_STATE(AUTH, async user=>{
+    if(user && !CU){
+      const phone=user.email.replace('@spin40.local','');
+      const s=await GET(fb(`users/${phone}`));
+      if(s.exists()){
+        const d=s.val();
+        CU={phone,name:d.name,role:d.role,pts:d.pts||0,type:d.type||'standard',ageGroup:d.ageGroup||null};
+        // Run setup tasks now that user is authenticated
+        loadFixedCoachCache();
+        loadFixedScheduleCache();
+        enterApp();
+      }
+    }
+  });
 });
 const fb = p => REF(DB,p);
 
@@ -1169,20 +1319,7 @@ async function loadFixedCoachCache(){
   ONVAL(fb('fixedCoaches'),snap=>{ fixedCoachCache=snap.exists()?snap.val():{};});
 }
 
-async function tryRestoreSession(){
-  try{
-    const saved=localStorage.getItem('spin40_session');
-    if(!saved) return;
-    const {phone,pw}=JSON.parse(saved);
-    if(!phone||!pw) return;
-    const s=await GET(fb(`users/${phone}`));
-    if(!s.exists()) return;
-    const d=s.val();
-    if(d.pw!==pw) return; // password changed, force re-login
-    CU={phone,name:d.name,role:d.role,pts:d.pts||0,type:d.type||'standard',ageGroup:d.ageGroup||null};
-    enterApp();
-  }catch(e){ /* silent fail, stay on login */ }
-}
+async function tryRestoreSession(){ /* replaced by Firebase Auth onAuthStateChanged above */ }
 
 async function loadFixedScheduleCache(){
   const s=await GET(fb('fixedSchedule'));
@@ -1296,24 +1433,291 @@ function selRole(r,el){
 }
 
 async function doLogin(){
-  if(!DB){showToast('系統初始化中','err');return;}
+  if(!DB||!AUTH){showToast('系統初始化中','err');return;}
   const phone=document.getElementById('l-phone').value.trim();
   const pass=document.getElementById('l-pass').value;
   const err=document.getElementById('l-err');
   err.textContent='';
   if(!phone||!pass){err.textContent='請填寫帳號與密碼';return;}
+  const email=`${phone}@spin40.local`;
   try{
+    // Sign in via Firebase Authentication
+    await SIGNIN(AUTH, email, pass);
+    // Load profile from database
     const s=await GET(fb(`users/${phone}`));
-    if(!s.exists()){err.textContent='此帳號尚未註冊';return;}
+    if(!s.exists()){err.textContent='此帳號尚未註冊';await SIGNOUT(AUTH);return;}
     const d=s.val();
-    if(d.pw!==pass){err.textContent='密碼錯誤';return;}
-    if(d.role!==currentRole){err.textContent=`身分不符（此帳號為 ${rlabel(d.role)}）`;return;}
+    if(d.role!==currentRole){
+      err.textContent=`身分不符（此帳號為 ${rlabel(d.role)}）`;
+      await SIGNOUT(AUTH);return;
+    }
     CU={phone,name:d.name,role:d.role,pts:d.pts||0,type:d.type||'standard',ageGroup:d.ageGroup||null};
-    // Persist session so page refresh doesn't kick to login
-    try{ localStorage.setItem('spin40_session', JSON.stringify({phone,pw:pass})); }catch(e){}
     document.getElementById('l-pass').value='';
+    // Run after auth confirmed
+    seedAdmin(); seedCourts(); seedSchedule();
+    loadFixedCoachCache();
+    loadFixedScheduleCache();
     enterApp();
-  }catch(e){err.textContent='連線錯誤';console.error(e);}
+  }catch(e){
+    if(e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found'){
+      err.textContent='帳號或密碼錯誤';
+    } else if(e.code==='auth/too-many-requests'){
+      err.textContent='登入嘗試次數過多，請稍後再試';
+    } else {
+      err.textContent='連線錯誤，請稍後再試';
+      console.error(e);
+    }
+  }
+}
+
+// ── Coach Shift Management ──
+const toMin=t=>{if(!t)return 0;const[h,m]=(t||'00:00').split(':');return parseInt(h)*60+(parseInt(m)||0);};
+const hrsFromShift=(s,e)=>Math.round((toMin(e)-toMin(s))/60*10)/10;
+
+let _shiftEditKey=null;
+let _shiftLinkedClasses=new Set();
+
+async function openAddShift(editKey=null){
+  _shiftEditKey=editKey;
+  _shiftLinkedClasses=new Set();
+  document.getElementById('shift-err').textContent='';
+  document.getElementById('shift-note').value='';
+  document.getElementById('shift-modal-title').textContent=editKey?'編輯排班':'＋ 新增排班';
+  document.getElementById('shift-confirm-btn').textContent=editKey?'儲存修改':'儲存';
+
+  // Default date = today
+  const now=new Date();
+  const defDate=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  document.getElementById('shift-date').value=defDate;
+  document.getElementById('shift-date').onchange=loadShiftClassOptions;
+  document.getElementById('shift-start').value='';
+  document.getElementById('shift-end').value='';
+
+  if(editKey){
+    const s=await GET(fb(`coachShifts/${CU.phone}/${editKey}`));
+    if(s.exists()){
+      const v=s.val();
+      document.getElementById('shift-date').value=v.date;
+      document.getElementById('shift-start').value=v.startTime;
+      document.getElementById('shift-end').value=v.endTime;
+      document.getElementById('shift-note').value=v.note||'';
+      _shiftLinkedClasses=new Set(v.linkedClasses||[]);
+    }
+  }
+
+  await loadShiftClassOptions();
+  document.getElementById('shift-modal').classList.add('on');
+}
+
+async function loadShiftClassOptions(){
+  const dateVal=document.getElementById('shift-date').value;
+  const el=document.getElementById('shift-class-list');
+  if(!dateVal){el.innerHTML='<div class="empty" style="font-size:12px;">請先選擇日期</div>';return;}
+  const dk=dateVal.replace(/-/g,'');
+  const s=await GET(fb(`schedule/${dk}`));
+  const template=getFixedClassesForDate(dk)||{};
+  const merged={...template,...(s.exists()?s.val():{})};
+  const classes=Object.entries(merged).filter(([,c])=>c.name&&c.time).sort(([,a],[,b])=>a.time.localeCompare(b.time));
+  if(!classes.length){el.innerHTML='<div class="empty" style="font-size:12px;">當日無排課</div>';return;}
+  el.innerHTML=classes.map(([key,c])=>{
+    const checked=_shiftLinkedClasses.has(key)?'checked':'';
+    return `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:8px;cursor:pointer;">
+      <input type="checkbox" ${checked} onchange="toggleShiftClass('${key}',this.checked)"
+        style="width:16px;height:16px;accent-color:var(--teal);">
+      <div>
+        <div style="font-size:13px;font-weight:700;">${c.name}</div>
+        <div style="font-size:11px;color:var(--gray);">${c.time} · ${c.type==='group'?'團體班':c.type==='private'?'個人班':'雙人班'} · 主教練：${c.coach||'待指派'}</div>
+      </div>
+    </label>`;
+  }).join('');
+}
+
+function toggleShiftClass(key, checked){
+  if(checked) _shiftLinkedClasses.add(key);
+  else _shiftLinkedClasses.delete(key);
+}
+
+async function confirmShift(){
+  const date=document.getElementById('shift-date').value;
+  const startTime=document.getElementById('shift-start').value;
+  const endTime=document.getElementById('shift-end').value;
+  const note=document.getElementById('shift-note').value.trim();
+  const err=document.getElementById('shift-err');
+  err.textContent='';
+  if(!date||!startTime||!endTime){err.textContent='請填寫日期和時間';return;}
+  if(startTime>=endTime){err.textContent='結束時間必須晚於開始時間';return;}
+  const hrs=hrsFromShift(startTime,endTime);
+  if(hrs<=0){err.textContent='時間設定異常';return;}
+
+  const dk=date.replace(/-/g,'');
+  const mk=`${date.slice(0,4)}${date.slice(5,7)}`;
+
+  try{
+    const shiftData={
+      date:dk, startTime, endTime, hrs,
+      linkedClasses:[..._shiftLinkedClasses],
+      note, createdAt:Date.now()
+    };
+
+    if(_shiftEditKey){
+      // Editing: reverse old hrs first
+      const old=await GET(fb(`coachShifts/${CU.phone}/${_shiftEditKey}`));
+      if(old.exists()){
+        const oldHrs=old.val().hrs||0;
+        const oldMk=`${old.val().date.slice(0,4)}${old.val().date.slice(4,6)}`;
+        await _adjustCoachHours(CU.phone,oldMk,-oldHrs);
+      }
+      await SET(fb(`coachShifts/${CU.phone}/${_shiftEditKey}`),shiftData);
+    } else {
+      await PUSH(fb(`coachShifts/${CU.phone}`),shiftData);
+    }
+
+    // Add hrs to coachHours
+    await _adjustCoachHours(CU.phone,mk,hrs);
+
+    closeModal('shift-modal');
+    showToast(`✓ 排班已儲存（${hrs} hrs）`);
+    loadCoachHours();
+    // Refresh shift panel if open
+    const panel=document.getElementById('co-shift-list');
+    if(panel&&panel.style.display!=='none') loadCoachShifts();
+    else {
+      // Update summary even if collapsed
+      const s2=await GET(fb(`coachShifts/${CU.phone}`));
+      const now2=new Date();
+      const mk2=`${now2.getFullYear()}${String(now2.getMonth()+1).padStart(2,'0')}`;
+      const list=s2.exists()?Object.values(s2.val()).filter(v=>v.date?.startsWith(mk2)):[];
+      const total=list.reduce((a,v)=>a+(v.hrs||0),0);
+      const sumEl=document.getElementById('shift-panel-summary');
+      if(sumEl&&list.length) sumEl.textContent=`${list.length} 筆 · 共 ${Math.round(total*10)/10} hrs`;
+    }
+  }catch(e){err.textContent='儲存失敗';console.error(e);}
+}
+
+async function _adjustCoachHours(phone,mk,delta){
+  const hs=await GET(fb(`coachHours/${phone}`));
+  const hd=hs.exists()?hs.val():{};
+  const now=new Date();
+  const curMk=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  const newMonth=Math.max(0,(hd[mk]||0)+delta);
+  const newWeek=mk===curMk?Math.max(0,(hd.weekHours||0)+delta):hd.weekHours||0;
+  await UPD(fb(`coachHours/${phone}`),{[mk]:newMonth,weekHours:newWeek});
+}
+
+async function deleteShift(key){
+  if(!confirm('確定刪除這筆排班？時數將會反扣。')) return;
+  try{
+    const s=await GET(fb(`coachShifts/${CU.phone}/${key}`));
+    if(s.exists()){
+      const v=s.val();
+      const mk=`${v.date.slice(0,4)}${v.date.slice(4,6)}`;
+      await _adjustCoachHours(CU.phone,mk,-(v.hrs||0));
+    }
+    await REMOVE(fb(`coachShifts/${CU.phone}/${key}`));
+    showToast('✓ 排班已刪除');
+    loadCoachHours();
+    loadCoachShifts();
+  }catch(e){showToast('刪除失敗','err');console.error(e);}
+}
+
+
+function toggleShiftPanel(){
+  const list=document.getElementById('co-shift-list');
+  const chevron=document.getElementById('shift-panel-chevron');
+  if(!list||!chevron) return;
+  const open=list.style.display!=='none';
+  list.style.display=open?'none':'block';
+  chevron.style.transform=open?'':'rotate(90deg)';
+  if(!open) loadCoachShifts();
+}
+
+async function loadCoachShifts(){
+  const el=document.getElementById('co-shift-list');
+  if(!el) return;
+  const now=new Date();
+  const mk=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  const s=await GET(fb(`coachShifts/${CU.phone}`));
+  const sumEl=document.getElementById('shift-panel-summary');
+
+  if(!s.exists()){
+    el.innerHTML='<div class="empty">本月尚無排班記錄</div>';
+    if(sumEl) sumEl.textContent='';
+    return;
+  }
+  const shifts=Object.entries(s.val())
+    .filter(([,v])=>v.date&&v.date.startsWith(mk))
+    .sort(([,a],[,b])=>a.date.localeCompare(b.date)||a.startTime.localeCompare(b.startTime));
+
+  if(!shifts.length){
+    el.innerHTML='<div class="empty">本月尚無排班記錄</div>';
+    if(sumEl) sumEl.textContent='';
+    return;
+  }
+
+  // Summary for collapsed header
+  const totalHrs=shifts.reduce((s,[,v])=>s+(v.hrs||0),0);
+  if(sumEl) sumEl.textContent=`${shifts.length} 筆 · 共 ${Math.round(totalHrs*10)/10} hrs`;
+
+  const DOW=['日','一','二','三','四','五','六'];
+  el.innerHTML=shifts.map(([key,v])=>{
+    const d=new Date(`${v.date.slice(0,4)}-${v.date.slice(4,6)}-${v.date.slice(6,8)}`);
+    const dateLabel=`${v.date.slice(4,6)}/${v.date.slice(6,8)} 週${DOW[d.getDay()]}`;
+    const linked=v.linkedClasses?.length
+      ?`<span style="font-size:10px;color:var(--teal);margin-left:4px;">關聯 ${v.linkedClasses.length} 課</span>`:'' ;
+    const note=v.note?`<span style="font-size:10px;color:var(--gray);margin-left:4px;">— ${v.note}</span>`:'';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg);border-radius:10px;margin-bottom:6px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:800;">${dateLabel} ${v.startTime}–${v.endTime}${linked}</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:1px;">${note||'—'}</div>
+      </div>
+      <div style="font-size:15px;font-weight:900;color:var(--teal);min-width:40px;text-align:right;">+${v.hrs}h</div>
+      <div style="display:flex;gap:4px;">
+        <button class="cancel-btn" style="font-size:11px;" onclick="openAddShift('${key}')">編輯</button>
+        <button class="cancel-btn" style="font-size:11px;color:var(--pink);border-color:rgba(240,80,138,.3);" onclick="deleteShift('${key}')">刪除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openChangePw(){
+  document.getElementById('cpw-old').value='';
+  document.getElementById('cpw-new').value='';
+  document.getElementById('cpw-new2').value='';
+  document.getElementById('cpw-err').textContent='';
+  document.getElementById('changepw-modal').classList.add('on');
+}
+
+async function confirmChangePw(){
+  const oldPw=document.getElementById('cpw-old').value;
+  const newPw=document.getElementById('cpw-new').value;
+  const newPw2=document.getElementById('cpw-new2').value;
+  const err=document.getElementById('cpw-err');
+  err.textContent='';
+  if(!oldPw||!newPw||!newPw2){err.textContent='請填寫所有欄位';return;}
+  if(newPw.length<6){err.textContent='新密碼至少需要6位';return;}
+  if(newPw!==newPw2){err.textContent='兩次輸入的新密碼不一致';return;}
+  if(oldPw===newPw){err.textContent='新密碼不能與舊密碼相同';return;}
+  try{
+    const {EmailAuthProvider,reauthenticateWithCredential,updatePassword}=window._auth;
+    const user=AUTH.currentUser;
+    if(!user){err.textContent='請重新登入後再試';return;}
+    // Re-authenticate with current password first
+    const credential=EmailAuthProvider.credential(user.email,oldPw);
+    await reauthenticateWithCredential(user,credential);
+    // Update to new password
+    await updatePassword(user,newPw);
+    closeModal('changepw-modal');
+    showToast('✓ 密碼已修改成功');
+  }catch(e){
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'){
+      err.textContent='目前密碼錯誤';
+    } else if(e.code==='auth/weak-password'){
+      err.textContent='新密碼強度不足，請使用更複雜的密碼';
+    } else {
+      err.textContent='修改失敗，請稍後再試';
+      console.error(e);
+    }
+  }
 }
 
 function rlabel(r){return r==='student'?'學員':r==='coach'?'教練':'管理員';}
@@ -1372,10 +1776,11 @@ function goAdmin(){
   setupAdmin();
 }
 
-function doLogout(){
+async function doLogout(){
   CU=null; selAge_=null;
-  _scheduleListenerActive=false; // allow re-attach on next login
+  _scheduleListenerActive=false;
   try{ localStorage.removeItem('spin40_session'); }catch(e){}
+  if(AUTH) await SIGNOUT(AUTH).catch(()=>{});
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('bnav').classList.remove('on');
   document.getElementById('scr-login').classList.add('active');
@@ -1383,6 +1788,8 @@ function doLogout(){
   document.getElementById('s-home').classList.add('on');
   document.querySelectorAll('.nitem').forEach((b,i)=>b.classList.toggle('on',i===0));
 }
+
+async function tryRestoreSession(){ /* replaced by onAuthStateChanged */ }
 
 // ═══════════════════════════════════════════
 //  STUDENT SETUP
@@ -1504,9 +1911,13 @@ async function loadSchedDayClasses(dateKey, label){
   // Fixed flex placeholders (key starts with fixed_): always show as "bookable"
   // Firebase private/duo classes: only show if student is enrolled
   let entries=Object.entries(classData).filter(([key,c])=>{
-    if(c.type==='group') return true;                          // 團體班：全部可見
-    if(key.startsWith('fixed_')) return true;                  // 固定彈性佔位：可見（讓學員知道可預約）
-    return myKeys.includes(`${dateKey}_${key}`);               // 個人/雙人課：只有自己看到
+    if(c.type==='group') return true;
+    if(key.startsWith('fixed_')) return true;
+    if(c.type==='private'||c.type==='duo'){
+      // Show if assigned to this student OR show as "contact to book" for all
+      return true;
+    }
+    return myKeys.includes(`${dateKey}_${key}`);
   });
 
   // Apply age/type filter tab
@@ -1529,10 +1940,22 @@ async function loadSchedDayClasses(dateKey, label){
       ?'<span class="badge bg" style="margin-left:6px;">學生</span>'
       :'<span class="badge bp" style="margin-left:6px;">彈性</span>';
 
+    const isPrivateOrDuo=c.type==='private'||c.type==='duo';
+    const alreadyAssigned=c.assignedStudents?.some(s=>s.phone===CU.phone);
+
     let btn='';
     if(isFixedFlex){
-      // Fixed placeholder: show contact prompt, not a direct enroll button
-      btn=`<span style="font-size:11px;color:var(--gray);font-weight:600;white-space:nowrap;">洽教練預約</span>`;
+      btn=`<a href="https://line.me/ti/p/@824gaejz" target="_blank" rel="noopener"
+        style="font-size:11px;font-weight:700;color:#06C755;white-space:nowrap;text-decoration:none;background:#e8fef0;padding:5px 10px;border-radius:8px;border:1px solid #b7f0cc;">
+        洽客服預約
+      </a>`;
+    } else if(isPrivateOrDuo && alreadyAssigned){
+      btn=`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);white-space:nowrap;" onclick="cancelEnroll('${dateKey}','${key}',${pts})">已報名</button>`;
+    } else if(isPrivateOrDuo){
+      btn=`<a href="https://line.me/ti/p/@824gaejz" target="_blank" rel="noopener"
+        style="font-size:11px;font-weight:700;color:#06C755;white-space:nowrap;text-decoration:none;background:#e8fef0;padding:5px 10px;border-radius:8px;border:1px solid #b7f0cc;">
+        洽客服預約
+      </a>`;
     } else if(enrolled){
       btn=`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);white-space:nowrap;" onclick="cancelEnroll('${dateKey}','${key}',${pts})">已報名</button>`;
     } else if(full){
@@ -1887,17 +2310,11 @@ async function loadCoachSchedule(){
 // openAddClass is defined in admin section and works for both contexts
 
 async function confirmAddClass(){
-  // Read date BEFORE confirmAdminClass closes the modal
-  const dateRaw=document.getElementById('acm-date').value;
   await confirmAdminClass();
-  if(!dateRaw) return;
-  const monthKey=`${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}`;
-  const hs=await GET(fb(`coachHours/${CU.phone}`));
-  const hd=hs.exists()?hs.val():{};
-  const cur=hd[monthKey]||0;
-  await UPD(fb(`coachHours/${CU.phone}`),{[monthKey]:cur+1,weekHours:(hd.weekHours||0)+1});
-  loadCoachSchedule();
-  loadCoachHours();
+  if(CU.role==='coach'){
+    loadCoachShifts();
+    loadCoachHours();
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1906,9 +2323,7 @@ async function confirmAddClass(){
 async function setupAdmin(){
   loadAdminMembers();
   loadAdminBookings();
-  loadCoachCards();
-  loadRateList();
-  loadWeekPlan(); // default tab is now weekplan
+  loadWeekPlan();
 }
 
 async function loadAdminMembers(){
@@ -2060,24 +2475,242 @@ async function loadCoachCards(){
   if(!coaches.length){el.innerHTML='<div class="empty">尚無教練帳號</div>';return;}
   const now=new Date();
   const mk=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+  const DOW=['日','一','二','三','四','五','六'];
+
   let html='';
   for(const [phone,c] of coaches){
     const hs=await GET(fb(`coachHours/${phone}`));
     const hd=hs.exists()?hs.val():{};
     const mh=hd[mk]||0;
+    const rs=await GET(fb(`coachRates/${phone}`));
+    const rate=rs.exists()?(rs.val().hourlyRate||0):0;
+    const salary=mh*rate;
     const maxH=40;
     const pct=Math.min(100,Math.round(mh/maxH*100));
-    html+=`<div class="coach-card">
-      <div class="cav">🧑‍🏫</div>
-      <div class="cinfo">
-        <div class="cname">${c.name}</div>
-        <div class="chours">本月 ${mh}hrs · 本週 ${hd.weekHours||0}hrs</div>
-        <div class="cbar-w"><div class="cbar" style="width:${pct}%"></div></div>
+
+    // Load shifts for this month
+    const shiftsSnap=await GET(fb(`coachShifts/${phone}`));
+    let shiftRows='';
+    if(shiftsSnap.exists()){
+      const shifts=Object.entries(shiftsSnap.val())
+        .filter(([,v])=>v.date&&v.date.startsWith(mk))
+        .sort(([,a],[,b])=>a.date.localeCompare(b.date)||a.startTime.localeCompare(b.startTime));
+      if(shifts.length){
+        shiftRows=shifts.map(([key,v])=>{
+          const d=new Date(`${v.date.slice(0,4)}-${v.date.slice(4,6)}-${v.date.slice(6,8)}`);
+          const dl=`${v.date.slice(4,6)}/${v.date.slice(6,8)} 週${DOW[d.getDay()]}`;
+          const linked=v.linkedClasses?.length?` <span style="color:var(--teal);font-size:10px;">關聯${v.linkedClasses.length}課</span>`:'';
+          const note=v.note?` <span style="color:var(--gray);font-size:10px;">— ${v.note}</span>`:'';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);">
+            <div style="font-size:12px;">${dl} ${v.startTime}–${v.endTime}${linked}${note}</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:12px;font-weight:800;color:var(--teal);">+${v.hrs}hr</span>
+              <button onclick="adminDeleteShift('${phone}','${key}','${mk}',${v.hrs})" style="background:none;border:none;cursor:pointer;color:var(--pink);font-size:13px;padding:0 2px;">✕</button>
+            </div>
+          </div>`;
+        }).join('');
+      } else {
+        shiftRows='<div style="font-size:11px;color:var(--gray);padding:4px 0;">本月尚無排班記錄</div>';
+      }
+    } else {
+      shiftRows='<div style="font-size:11px;color:var(--gray);padding:4px 0;">本月尚無排班記錄</div>';
+    }
+
+    html+=`<div class="coach-card" style="flex-direction:column;gap:0;">
+      <div style="display:flex;align-items:center;gap:12px;width:100%;">
+        <div class="cav">🧑‍🏫</div>
+        <div class="cinfo" style="flex:1;">
+          <div class="cname">${c.name}</div>
+          <div class="chours">本月 ${mh}hrs · 時薪 $${rate} · 試算 $${salary.toLocaleString()}</div>
+          <div class="cbar-w"><div class="cbar" style="width:${pct}%"></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+          <div class="chbig">${mh}h</div>
+        </div>
       </div>
-      <div class="chbig">${mh}h</div>
+      <!-- Shift breakdown -->
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);width:100%;">
+        <div style="font-size:10px;font-weight:800;color:var(--gray);letter-spacing:.5px;margin-bottom:4px;">本月排班明細</div>
+        ${shiftRows}
+      </div>
     </div>`;
   }
   el.innerHTML=html;
+}
+
+// ── Admin Shift Functions ──
+let _adminShiftLinked=new Set();
+let _adminShiftEditKey=null;
+let _adminShiftPhone=null;
+
+// ── Shift follow-up after class save ──
+let _pendingShiftFromClass=null;
+
+function showShiftFollowUp(){
+  if(!_pendingShiftFromClass) return;
+  const {coachName, time, dateKey, mode}=_pendingShiftFromClass;
+  const d=new Date(`${dateKey.slice(0,4)}-${dateKey.slice(4,6)}-${dateKey.slice(6,8)}`);
+  const DOW=['日','一','二','三','四','五','六'];
+  const dateLabel=`${dateKey.slice(4,6)}/${dateKey.slice(6,8)} 週${DOW[d.getDay()]}`;
+  const isEdit=mode==='edit';
+  document.getElementById('shift-followup-title').textContent=isEdit?'✏️ 下一步：編輯教練排班':'📋 下一步：新增教練排班';
+  document.getElementById('shift-followup-desc').innerHTML=
+    `課程已${isEdit?'更新':'儲存'}。要為 <strong>${coachName}</strong> ${isEdit?'查看/編輯':'新增'}這堂課的排班記錄嗎？<br>
+    <span style="color:var(--gray);font-size:12px;">${dateLabel} · 上課時間 ${time}</span>`;
+  document.getElementById('shift-followup-modal').classList.add('on');
+}
+
+async function openShiftFromClass(){
+  closeModal('shift-followup-modal');
+  if(!_pendingShiftFromClass) return;
+  const {dateKey, classKey, coachName, time}=_pendingShiftFromClass;
+  _pendingShiftFromClass=null;
+
+  const dateStr=`${dateKey.slice(0,4)}-${dateKey.slice(4,6)}-${dateKey.slice(6,8)}`;
+
+  if(CU.role==='coach'){
+    // Coach uses their own shift modal
+    await openAddShift();
+    document.getElementById('shift-date').value=dateStr;
+    document.getElementById('shift-date').onchange=loadShiftClassOptions;
+    document.getElementById('shift-start').value=time;
+    document.getElementById('shift-end').value='';
+    await loadShiftClassOptions();
+    // Auto-check this class
+    setTimeout(()=>{
+      document.querySelectorAll('#shift-class-list input[type=checkbox]').forEach(cb=>{
+        const label=cb.closest('label');
+        if(label&&label.textContent.includes(time)){
+          cb.checked=true;
+          _shiftLinkedClasses.add(classKey);
+        }
+      });
+    },300);
+  } else {
+    // Admin uses admin shift modal
+    const us=await GET(fb('users'));
+    let coachPhone='';
+    if(us.exists()){
+      const found=Object.entries(us.val()).find(([,v])=>v.role==='coach'&&v.name===coachName);
+      if(found) coachPhone=found[0];
+    }
+    await openAdminShift(coachPhone);
+    document.getElementById('admin-shift-date').value=dateStr;
+    document.getElementById('admin-shift-start').value=time;
+    document.getElementById('admin-shift-end').value='';
+    await loadAdminShiftClasses();
+    setTimeout(()=>{
+      document.querySelectorAll('#admin-shift-class-list input[type=checkbox]').forEach(cb=>{
+        const label=cb.closest('label');
+        if(label&&label.textContent.includes(time)){
+          cb.checked=true;
+          _adminShiftLinked.add(classKey);
+        }
+      });
+    },300);
+  }
+}
+
+async function openAdminShift(presetPhone='', editKey=null){
+  _adminShiftLinked=new Set();
+  _adminShiftEditKey=editKey;
+  _adminShiftPhone=presetPhone||null;
+  document.getElementById('admin-shift-err').textContent='';
+  document.getElementById('admin-shift-note').value='';
+  document.getElementById('admin-shift-start').value='';
+  document.getElementById('admin-shift-end').value='';
+
+  // Populate coach selector
+  const us=await GET(fb('users'));
+  const coaches=us.exists()?Object.entries(us.val()).filter(([,v])=>v.role==='coach'):[];
+  const sel=document.getElementById('admin-shift-coach');
+  sel.innerHTML='<option value="">— 選擇教練 —</option>'+
+    coaches.map(([p,c])=>`<option value="${p}">${c.name}（${p}）</option>`).join('');
+  if(presetPhone) sel.value=presetPhone;
+
+  // Default date = today
+  const now=new Date();
+  document.getElementById('admin-shift-date').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+  await loadAdminShiftClasses();
+  document.getElementById('admin-shift-modal').classList.add('on');
+}
+
+async function loadAdminShiftClasses(){
+  const dateVal=document.getElementById('admin-shift-date').value;
+  const el=document.getElementById('admin-shift-class-list');
+  if(!dateVal){el.innerHTML='<div class="empty" style="font-size:12px;">請先選擇日期</div>';return;}
+  const dk=dateVal.replace(/-/g,'');
+  const s=await GET(fb(`schedule/${dk}`));
+  const template=getFixedClassesForDate(dk)||{};
+  const merged={...template,...(s.exists()?s.val():{})};
+  const classes=Object.entries(merged).filter(([,c])=>c.name&&c.time).sort(([,a],[,b])=>a.time.localeCompare(b.time));
+  if(!classes.length){el.innerHTML='<div class="empty" style="font-size:12px;">當日無排課</div>';return;}
+  el.innerHTML=classes.map(([key,c])=>`
+    <label style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--bg);border-radius:8px;cursor:pointer;">
+      <input type="checkbox" onchange="toggleAdminShiftClass('${key}',this.checked)"
+        style="width:16px;height:16px;accent-color:var(--teal);">
+      <div>
+        <div style="font-size:13px;font-weight:700;">${c.name}</div>
+        <div style="font-size:11px;color:var(--gray);">${c.time} · ${c.type==='group'?'團體班':c.type==='private'?'個人班':'雙人班'} · 主教練：${c.coach||'待指派'}</div>
+      </div>
+    </label>`).join('');
+}
+
+function toggleAdminShiftClass(key,checked){
+  if(checked) _adminShiftLinked.add(key);
+  else _adminShiftLinked.delete(key);
+}
+
+async function confirmAdminShift(){
+  const phone=document.getElementById('admin-shift-coach').value;
+  const date=document.getElementById('admin-shift-date').value;
+  const startTime=document.getElementById('admin-shift-start').value;
+  const endTime=document.getElementById('admin-shift-end').value;
+  const note=document.getElementById('admin-shift-note').value.trim();
+  const err=document.getElementById('admin-shift-err');
+  err.textContent='';
+  if(!phone){err.textContent='請選擇教練';return;}
+  if(!date||!startTime||!endTime){err.textContent='請填寫日期和時間';return;}
+  if(startTime>=endTime){err.textContent='結束時間必須晚於開始時間';return;}
+  const hrs=Math.round((toMin(endTime)-toMin(startTime))/60*10)/10;
+  if(hrs<=0){err.textContent='時間設定異常';return;}
+  const dk=date.replace(/-/g,'');
+  const mk=`${date.slice(0,4)}${date.slice(5,7)}`;
+  try{
+    await PUSH(fb(`coachShifts/${phone}`),{
+      date:dk,startTime,endTime,hrs,
+      linkedClasses:[..._adminShiftLinked],
+      note,addedBy:'admin',createdAt:Date.now()
+    });
+    // Adjust hours
+    const hs=await GET(fb(`coachHours/${phone}`));
+    const hd=hs.exists()?hs.val():{};
+    const now=new Date();
+    const curMk=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+    await UPD(fb(`coachHours/${phone}`),{
+      [mk]:Math.max(0,(hd[mk]||0)+hrs),
+      weekHours:mk===curMk?Math.max(0,(hd.weekHours||0)+hrs):(hd.weekHours||0)
+    });
+    closeModal('admin-shift-modal');
+    showToast(`✓ 已為教練新增排班（${hrs} hrs）`);
+  }catch(e){err.textContent='儲存失敗';console.error(e);}
+}
+
+async function adminDeleteShift(phone,key,mk,hrs){
+  if(!confirm('確定刪除這筆排班？時數將會反扣。')) return;
+  try{
+    await REMOVE(fb(`coachShifts/${phone}/${key}`));
+    const hs=await GET(fb(`coachHours/${phone}`));
+    const hd=hs.exists()?hs.val():{};
+    const now=new Date();
+    const curMk=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}`;
+    await UPD(fb(`coachHours/${phone}`),{
+      [mk]:Math.max(0,(hd[mk]||0)-hrs),
+      weekHours:mk===curMk?Math.max(0,(hd.weekHours||0)-hrs):(hd.weekHours||0)
+    });
+    showToast('✓ 排班已刪除，時數已反扣');
+  }catch(e){showToast('刪除失敗','err');console.error(e);}
 }
 
 // ── Hourly Rate ──
@@ -2338,6 +2971,7 @@ async function confirmRoleChange(){
     if(ptsRaw!=='') upd.pts=parseInt(ptsRaw)||0;
     await UPD(fb(`users/${phone}`),upd);
     showToast('✓ 帳號已更新');
+    document.getElementById('rm-pts').value='';
     onRmSel();
     loadAdminMembers();
   }catch(e){err.textContent='更新失敗';console.error(e);}
@@ -2354,7 +2988,33 @@ async function createStaff(){
   try{
     const s=await GET(fb(`users/${phone}`));
     if(s.exists()){err.textContent='此號碼已有帳號';return;}
-    await SET(fb(`users/${phone}`),{name,pw:pass,role,pts:0,type:'standard',createdAt:Date.now()});
+
+    // Use a secondary Firebase app instance to create account
+    // without signing out the current admin
+    const email=`${phone}@spin40.local`;
+    try{
+      const { initializeApp, getApp } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+      const { getAuth, createUserWithEmailAndPassword: createUser } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+      let secondaryApp;
+      try{ secondaryApp=getApp('secondary'); }
+      catch(e){
+        secondaryApp=initializeApp({
+          apiKey:"AIzaSyD2UAYUcp_flhFukih510J7jJ6stm_UMZQ",
+          authDomain:"gym-tt.firebaseapp.com",
+        },'secondary');
+      }
+      const secondaryAuth=getAuth(secondaryApp);
+      await createUser(secondaryAuth, email, pass);
+      await secondaryAuth.signOut();
+    }catch(authErr){
+      if(authErr.code==='auth/email-already-in-use'){
+        err.textContent='此號碼已有帳號';return;
+      }
+      throw authErr;
+    }
+
+    // Write to database (no pw field)
+    await SET(fb(`users/${phone}`),{name,role,pts:0,type:'standard',createdAt:Date.now()});
     showToast(`✓ ${rlabel(role)} ${name} 已建立`);
     document.getElementById('nc-name').value='';
     document.getElementById('nc-phone').value='';
@@ -2391,7 +3051,7 @@ async function checkCashStudentMatch(){
 
 function openReg(){document.getElementById('ovl-reg').classList.add('on');}
 async function doRegister(){
-  if(!DB){showToast('系統初始化中','err');return;}
+  if(!DB||!AUTH){showToast('系統初始化中','err');return;}
   const name=document.getElementById('r-name').value.trim();
   const phone=document.getElementById('r-phone').value.trim();
   const pass=document.getElementById('r-pass').value;
@@ -2403,16 +3063,33 @@ async function doRegister(){
   if(pass!==pass2){err.textContent='兩次密碼不一致';return;}
   if(!/^09\d{8}$/.test(phone)){err.textContent='請輸入正確手機格式';return;}
   try{
-    const s=await GET(fb(`users/${phone}`));
-    if(s.exists()){err.textContent='此號碼已註冊';return;}
-    await SET(fb(`users/${phone}`),{name,pw:pass,role:'student',pts:0,type:'standard',createdAt:Date.now()});
+    // Step 1: Create Firebase Auth account first (this logs us in)
+    const email=`${phone}@spin40.local`;
+    try{
+      await window._auth.createUserWithEmailAndPassword(AUTH, email, pass);
+    }catch(authErr){
+      if(authErr.code==='auth/email-already-in-use'){
+        err.textContent='此號碼已註冊';return;
+      }
+      throw authErr;
+    }
 
-    // Check for matching cash student records (same phone or same name+phone)
+    // Step 2: Now authenticated — check if DB profile already exists
+    const s=await GET(fb(`users/${phone}`));
+    if(s.exists()){
+      // Auth created but DB already has this phone — sign out and abort
+      await SIGNOUT(AUTH).catch(()=>{});
+      err.textContent='此號碼已註冊';return;
+    }
+
+    // Write to database (no pw field)
+    await SET(fb(`users/${phone}`),{name,role:'student',pts:0,type:'standard',createdAt:Date.now()});
+
+    // Import cash student history if exists
     const cashSnap=await GET(fb(`cashStudents/${phone}`));
     let importedCount=0;
     if(cashSnap.exists()){
       const cashData=cashSnap.val();
-      // Import class history into user history
       if(cashData.classes){
         for(const [,cls] of Object.entries(cashData.classes)){
           await PUSH(fb(`history/${phone}`),{
@@ -2422,7 +3099,6 @@ async function doRegister(){
           importedCount++;
         }
       }
-      // Mark cash record as imported
       await UPD(fb(`cashStudents/${phone}`),{importedTo:phone,importedAt:Date.now()});
     }
 
@@ -2432,7 +3108,11 @@ async function doRegister(){
     showToast(msg);
     closeOvl('ovl-reg');
     document.getElementById('l-phone').value=phone;
-  }catch(e){err.textContent='連線錯誤';console.error(e);}
+    // Sign out right after registration so user logs in fresh
+    await SIGNOUT(AUTH).catch(()=>{});
+  }catch(e){
+    err.textContent='連線錯誤，請稍後再試';console.error(e);
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -2461,7 +3141,7 @@ function aTab(id,el){
   el.classList.add('on');
   if(id==='members') loadAdminMembers();
   if(id==='courts'){loadCourtsDetail('courts-detail-admin',true);loadAdminBookings();}
-  if(id==='coaches'){loadCoachCards();loadRateList();loadBonusList();}
+  if(id==='coaches'){loadRateList();loadBonusList();}
   if(id==='schedule') initAdminSched();
   if(id==='stats') loadAdminStats();
   if(id==='weekplan') loadWeekPlan();
@@ -2789,7 +3469,6 @@ async function loadWeekPlan(){
     <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:var(--pink);border-radius:3px;display:inline-block;"></span>個人班</span>
     <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:#f59e0b;border-radius:3px;display:inline-block;"></span>雙人班</span>
     <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;background:var(--gray);border-radius:3px;display:inline-block;opacity:.4;"></span>待指派</span>
-    <span style="color:var(--gray);">· 點擊課程可編輯</span>
   </div>`;
   el.innerHTML=html;
 }
@@ -3033,10 +3712,9 @@ function toggleFixedSched(){
 
 async function initAdminSched(){
   buildAdminSchedDstrip();
-  // Fixed schedule section is collapsed by default — loaded lazily on open
-  const today = dayKey(new Date());
-  adminSchedDate = today;
-  loadAdminSchedDay(today, '今日課程');
+  const today=dayKey(new Date());
+  adminSchedDate=today;
+  loadAdminSchedDay(today,'今日課程');
 }
 
 // ── Editable Fixed Schedule (Fix 3) ──
@@ -3517,37 +4195,21 @@ async function confirmAdminClass(){
 
   try{
     if(adminClassMode==='add'){
-      await PUSH(fb(`schedule/${dateKey}`),classObj);
+      const newRef=await PUSH(fb(`schedule/${dateKey}`),classObj);
+      const savedKey=newRef.key;
       showToast('✓ 課程已新增'+(assignedStudents.length?`，已指派 ${assignedStudents.length} 位學員`:''));
+      // Prompt to add shift for any role if coach is assigned
+      if(coach){
+        _pendingShiftFromClass={dateKey, classKey:savedKey, coach, time, coachName:coach, mode:'add'};
+        setTimeout(()=>showShiftFollowUp(),600);
+      }
     } else {
       const existing=await GET(fb(`schedule/${adminClassEditDate}/${adminClassEditKey}`));
       if(existing.exists()){
         const exVal=existing.val();
         classObj.enrolled=exVal.enrolled||0;
         classObj.confirmed=exVal.confirmed||false;
-
-        // Bug 1 fix: if class was already confirmed and type changed, adjust coach hours
-        if(exVal.confirmed && exVal.type !== type && exVal.coach){
-          const hrsOld=exVal.type==='group'?1.5:1;  // group=1.5, private/duo=1
-          const hrsNew=type==='group'?1.5:1;          // group=1.5, private/duo=1
-          const diff=hrsNew-hrsOld;
-          if(diff!==0){
-            const us=await GET(fb('users'));
-            if(us.exists()){
-              const coachEntry=Object.entries(us.val()).find(([,v])=>v.role==='coach'&&v.name===exVal.coach);
-              if(coachEntry){
-                const cPhone=coachEntry[0];
-                const mk=`${adminClassEditDate.slice(0,4)}${adminClassEditDate.slice(4,6)}`;
-                const hs=await GET(fb(`coachHours/${cPhone}`));
-                const hd=hs.exists()?hs.val():{};
-                await UPD(fb(`coachHours/${cPhone}`),{
-                  [mk]:Math.max(0,(hd[mk]||0)+diff),
-                  weekHours:Math.max(0,(hd.weekHours||0)+diff)
-                });
-              }
-            }
-          }
-        }
+        // Hours are now managed via coachShifts — no adjustment needed here
       }
       await SET(fb(`schedule/${adminClassEditDate}/${adminClassEditKey}`),classObj);
       const setFixed=document.getElementById('acm-set-fixed')?.checked;
@@ -3557,6 +4219,11 @@ async function confirmAdminClass(){
         showToast('✓ 課程已更新，固定教練已套用');
       } else {
         showToast('✓ 課程已更新'+(assignedStudents.length?`，已指派 ${assignedStudents.length} 位學員`:''));
+      }
+      // Prompt to add/edit shift for edit mode too
+      if(coach){
+        _pendingShiftFromClass={dateKey:adminClassEditDate, classKey:adminClassEditKey, coach, time, coachName:coach, mode:'edit'};
+        setTimeout(()=>showShiftFollowUp(),600);
       }
     }
     closeModal('add-class-modal');
@@ -3684,16 +4351,7 @@ async function confirmAttendance(){
     showToast(msg);
     loadPendingConfirmations();
     loadCoachSchedule();
-    // Update coach hours
-    const monthKey=`${new Date().getFullYear()}${String(new Date().getMonth()+1).padStart(2,'0')}`;
-    const hs=await GET(fb(`coachHours/${CU.phone}`));
-    const hd=hs.exists()?hs.val():{};
-    const hrs=classData.type==='group'?1.5:1; // group=1.5hr, private/duo=1hr
-    await UPD(fb(`coachHours/${CU.phone}`),{
-      [monthKey]:(hd[monthKey]||0)+hrs,
-      weekHours:(hd.weekHours||0)+hrs
-    });
-    loadCoachHours();
+    // Note: coach hours are now managed via coachShifts, not auto-calculated here
   }catch(e){showToast('確認失敗','err');console.error(e);}
 }
 
@@ -3714,19 +4372,7 @@ async function deleteClass(dateKey, classKey){
       if(c.confirmed && c.coach){
         // Find coach phone
         const us=await GET(fb('users'));
-        if(us.exists()){
-          const coachEntry=Object.entries(us.val()).find(([,v])=>v.role==='coach'&&v.name===c.coach);
-          if(coachEntry){
-            const coachPhone=coachEntry[0];
-            const hrs=c.type==='group'?1.5:1; // group=1.5hr, private/duo=1hr
-            const mk=`${dateKey.slice(0,4)}${dateKey.slice(4,6)}`;
-            const hs=await GET(fb(`coachHours/${coachPhone}`));
-            const hd=hs.exists()?hs.val():{};
-            const newMonthH=Math.max(0,(hd[mk]||0)-hrs);
-            const newWeekH=Math.max(0,(hd.weekHours||0)-hrs);
-            await UPD(fb(`coachHours/${coachPhone}`),{[mk]:newMonthH,weekHours:newWeekH});
-          }
-        }
+        // Hours are now managed via coachShifts — no reversal needed here
       }
     }
     await REMOVE(fb(`schedule/${dateKey}/${classKey}`));
