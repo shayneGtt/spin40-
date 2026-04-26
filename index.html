@@ -1013,7 +1013,7 @@ img{display:block;}
 
 <!-- Coach Fixed Schedule Modal (Fix 4) -->
 <div class="mback" id="coach-fixed-modal" onclick="closeModal('coach-fixed-modal')">
-  <div class="msheet" onclick="event.stopPropagation()" style="max-height:85dvh;overflow-y:auto;">
+  <div class="msheet" onclick="event.stopPropagation()" style="max-height:92dvh;overflow-y:auto;display:flex;flex-direction:column;">
     <div class="mhandle"></div>
     <div class="mtitle">我的固定課表</div>
     <div id="coach-fixed-list" style="margin-bottom:14px;"></div>
@@ -1054,6 +1054,16 @@ img{display:block;}
           <div class="flabel">人數上限</div>
           <input class="finput" type="number" id="cff-seats" value="1" min="1" max="10">
         </div>
+      </div>
+      <!-- 指派固定學員 -->
+      <div style="margin-bottom:12px;">
+        <div class="flabel" style="margin-bottom:8px;">固定指派學員（選填）</div>
+        <input class="finput" type="text" id="cff-student-search" placeholder="🔍 搜尋學員姓名或電話"
+          oninput="filterCffStudents()" style="padding:9px 12px;font-size:13px;margin-bottom:8px;">
+        <div id="cff-student-list" style="max-height:140px;overflow-y:auto;border:2px solid var(--border);border-radius:12px;background:var(--bg);">
+          <div class="empty" style="padding:10px;font-size:12px;">輸入姓名或電話搜尋</div>
+        </div>
+        <div id="cff-assigned-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:0;"></div>
       </div>
       <div class="errmsg" id="cff-err"></div>
       <div class="brow">
@@ -2357,7 +2367,7 @@ async function loadCoachSchedule(){
       </div>
       <div style="display:flex;align-items:center;gap:6px;">
         <div class="badge ${c.type==='group'?'bg':c.type==='private'?'bp':'bd'}">${c.type==='group'?'團':'個'}</div>
-        ${(c.source==='personal'||c.source==='personal_override')?`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;" onclick="openEditPersonalFixedDay('${c.classKey}','${c.dateKey}','${(c.name||'').replace(/'/g,'&#39;')}','${c.time}',${c.seats||1})">編輯</button>`:''}
+        ${(c.source==='personal'||c.source==='personal_override')?`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;" onclick="openEditClass('${c.dateKey}','${c.classKey}')">編輯</button>`:''}
       </div>
     </div>`).join('');
 }
@@ -2619,20 +2629,18 @@ function showShiftFollowUp(){
 async function openShiftFromClass(){
   closeModal('shift-followup-modal');
   if(!_pendingShiftFromClass) return;
-  const {dateKey, classKey, coachName, time}=_pendingShiftFromClass;
+  const {dateKey, classKey, coachName, time, mode}=_pendingShiftFromClass;
   _pendingShiftFromClass=null;
 
   const dateStr=`${dateKey.slice(0,4)}-${dateKey.slice(4,6)}-${dateKey.slice(6,8)}`;
 
-  if(CU.role==='coach'){
-    // Coach uses their own shift modal
+  if(CU.role==='coach'||mode==='shift-check'){
     await openAddShift();
     document.getElementById('shift-date').value=dateStr;
     document.getElementById('shift-date').onchange=loadShiftClassOptions;
     document.getElementById('shift-start').value=time;
     document.getElementById('shift-end').value='';
     await loadShiftClassOptions();
-    // Auto-check this class
     setTimeout(()=>{
       document.querySelectorAll('#shift-class-list input[type=checkbox]').forEach(cb=>{
         const label=cb.closest('label');
@@ -2643,7 +2651,6 @@ async function openShiftFromClass(){
       });
     },300);
   } else {
-    // Admin uses admin shift modal
     const us=await GET(fb('users'));
     let coachPhone='';
     if(us.exists()){
@@ -4005,11 +4012,16 @@ async function openEditClass(dateKey, classKey){
   const s=await GET(fb(`schedule/${dateKey}/${classKey}`));
   if(s.exists()){
     c=s.val();
-    // restore previously assigned students
     if(c.assignedStudents) assignedStudents=[...c.assignedStudents];
   } else {
     const t=getFixedClassesForDate(dateKey);
     c=t?.[classKey];
+    // Personal fixed class (cf_ prefix) — read from coachFixedSchedule
+    if(!c && classKey.startsWith('cf_') && CU.role==='coach'){
+      const rawKey=classKey.replace(/^cf_/,'');
+      const cfSnap=await GET(fb(`coachFixedSchedule/${CU.phone}/${rawKey}`));
+      if(cfSnap.exists()) c={...cfSnap.val(),source:'personal'};
+    }
   }
   if(!c){ showToast('找不到課程資料','err'); return; }
 
@@ -4420,8 +4432,34 @@ async function confirmAttendance(){
     showToast(msg);
     loadPendingConfirmations();
     loadCoachSchedule();
-    // Note: coach hours are now managed via coachShifts, not auto-calculated here
+    // Check if coach has a shift record for this date
+    await checkShiftAfterConfirm(dateKey, classKey, classData);
   }catch(e){showToast('確認失敗','err');console.error(e);}
+}
+
+async function checkShiftAfterConfirm(dateKey, classKey, classData){
+  if(CU.role!=='coach') return;
+  // Check if any shift exists for this coach on this date
+  const snap=await GET(fb(`coachShifts/${CU.phone}`));
+  const hasShift=snap.exists()&&Object.values(snap.val()).some(v=>v.date===dateKey);
+  if(!hasShift){
+    // Show prompt
+    _pendingShiftFromClass={
+      dateKey, classKey, coach:CU.name, coachName:CU.name,
+      time:classData.time, mode:'shift-check'
+    };
+    setTimeout(()=>{
+      const title=document.getElementById('shift-followup-title');
+      const desc=document.getElementById('shift-followup-desc');
+      const d=new Date(`${dateKey.slice(0,4)}-${dateKey.slice(4,6)}-${dateKey.slice(6,8)}`);
+      const DOW=['日','一','二','三','四','五','六'];
+      const dateLabel=`${dateKey.slice(4,6)}/${dateKey.slice(6,8)} 週${DOW[d.getDay()]}`;
+      if(title) title.textContent='⏱ 提醒：尚未新增排班';
+      if(desc) desc.innerHTML=`你確認了 <strong>${classData.name}</strong> 的上課，但 <strong>${dateLabel}</strong> 尚無排班記錄。<br>
+        <span style="color:var(--gray);font-size:12px;">新增排班才會計入本月時數與薪資</span>`;
+      document.getElementById('shift-followup-modal').classList.add('on');
+    },800);
+  }
 }
 
 async function deleteClassFromModal(){
@@ -4582,7 +4620,7 @@ async function loadCoachWeekSched(){
           const isPersonal=key.startsWith('cf_');
           const editBtn=isPersonal
             ?`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
-                onclick="openEditPersonalFixedDay('${key}','${dk}','${(c.name||'').replace(/'/g,'&#39;')}','${c.time}',${c.seats||1})">編輯</button>`
+                onclick="openEditClass('${dk}','${key}')">編輯</button>`
             :`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
                 onclick="openEditClass('${dk}','${key}')">編輯</button>`;
           return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
@@ -4657,9 +4695,12 @@ async function loadCoachFixedList(){
     </div>`).join('');
 }
 
+let _cffStudents=[]; // assigned students for coach fixed form
+let _cffAllStudents=[]; // all students cache for search
+
 function openCoachFixedForm(key=null){
   editingCoachFixedKey=key;
-  const e=key?(document.getElementById('coach-fixed-list').dataset||null):null;
+  _cffStudents=[];
   document.getElementById('cff-name').value='';
   document.getElementById('cff-dow').value=1;
   document.getElementById('cff-time').value='13:30';
@@ -4667,11 +4708,21 @@ function openCoachFixedForm(key=null){
   document.getElementById('cff-seats').value=1;
   document.getElementById('cff-err').textContent='';
   document.getElementById('cff-title').textContent='新增固定課';
+  document.getElementById('cff-student-search').value='';
+  document.getElementById('cff-student-list').innerHTML='<div class="empty" style="padding:10px;font-size:12px;">輸入姓名或電話搜尋</div>';
+  document.getElementById('cff-assigned-chips').innerHTML='';
   document.getElementById('coach-fixed-form').style.display='block';
+  loadCffStudents();
+  // Scroll modal down to show student section
+  setTimeout(()=>{
+    const modal=document.querySelector('#coach-fixed-modal .msheet');
+    if(modal) modal.scrollTop=modal.scrollHeight;
+  },100);
 }
 
 async function editCoachFixed(key){
   editingCoachFixedKey=key;
+  _cffStudents=[];
   const s=await GET(fb(`coachFixedSchedule/${CU.phone}/${key}`));
   if(!s.exists()) return;
   const e=s.val();
@@ -4682,7 +4733,57 @@ async function editCoachFixed(key){
   document.getElementById('cff-seats').value=e.seats||1;
   document.getElementById('cff-err').textContent='';
   document.getElementById('cff-title').textContent='編輯固定課';
+  document.getElementById('cff-student-search').value='';
+  if(e.assignedStudents) _cffStudents=[...e.assignedStudents];
   document.getElementById('coach-fixed-form').style.display='block';
+  await loadCffStudents();
+  renderCffChips();
+}
+
+async function loadCffStudents(){
+  if(_cffAllStudents.length===0){
+    const s=await GET(fb('users'));
+    if(s.exists()) _cffAllStudents=Object.entries(s.val())
+      .filter(([,v])=>v.role==='student')
+      .map(([phone,v])=>({phone,name:v.name,pts:v.pts||0}));
+  }
+  filterCffStudents();
+}
+
+function filterCffStudents(){
+  const q=document.getElementById('cff-student-search')?.value.toLowerCase()||'';
+  const el=document.getElementById('cff-student-list');
+  const filtered=q?_cffAllStudents.filter(s=>s.name.toLowerCase().includes(q)||s.phone.includes(q)):_cffAllStudents;
+  if(!filtered.length){el.innerHTML='<div class="empty" style="padding:10px;font-size:12px;">找不到學員</div>';return;}
+  el.innerHTML=filtered.map(s=>{
+    const sel=_cffStudents.some(a=>a.phone===s.phone);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;${sel?'background:rgba(45,191,170,.08);':''}"
+      onclick="toggleCffStudent('${s.phone}','${s.name.replace(/'/g,'&#39;')}',${s.pts})">
+      <div>
+        <div style="font-size:13px;font-weight:700;">${s.name}</div>
+        <div style="font-size:11px;color:var(--gray);">${s.phone} · ${s.pts}pts</div>
+      </div>
+      <div style="font-size:18px;color:${sel?'var(--teal)':'var(--border)'};">${sel?'✓':'+'}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCffStudent(phone,name,pts){
+  const idx=_cffStudents.findIndex(a=>a.phone===phone);
+  const type=document.getElementById('cff-type').value;
+  const ptsToDeduct=type==='private'?2:1;
+  if(idx>=0) _cffStudents.splice(idx,1);
+  else _cffStudents.push({phone,name,pts,ptsToDeduct});
+  renderCffChips();
+  filterCffStudents();
+}
+
+function renderCffChips(){
+  document.getElementById('cff-assigned-chips').innerHTML=_cffStudents.map(s=>`
+    <div style="display:flex;align-items:center;gap:6px;background:var(--teal-l);color:var(--teal2);border:1px solid rgba(45,191,170,.3);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;">
+      ${s.name}
+      <span onclick="toggleCffStudent('${s.phone}','${s.name}',${s.pts})" style="cursor:pointer;color:var(--pink);font-size:14px;">×</span>
+    </div>`).join('');
 }
 
 async function deleteCoachFixed(key){
@@ -4705,7 +4806,11 @@ async function confirmCoachFixedForm(){
   const seats=parseInt(document.getElementById('cff-seats').value)||1;
   const err=document.getElementById('cff-err');
   if(!name){err.textContent='請填寫課程名稱';return;}
-  const obj={dow,time,name,type,ageGroup:'flex',seats,coach:CU.name};
+  const ptsToDeduct=type==='private'?2:1;
+  const obj={
+    dow,time,name,type,ageGroup:'flex',seats,coach:CU.name,
+    assignedStudents:_cffStudents.map(s=>({phone:s.phone,name:s.name,ptsToDeduct:s.cash?0:ptsToDeduct,cash:s.cash||false}))
+  };
   try{
     if(editingCoachFixedKey){
       await SET(fb(`coachFixedSchedule/${CU.phone}/${editingCoachFixedKey}`),obj);
@@ -4713,9 +4818,9 @@ async function confirmCoachFixedForm(){
       await PUSH(fb(`coachFixedSchedule/${CU.phone}`),obj);
     }
     closeCoachFixedForm();
-    showToast('✓ 固定課已儲存');
+    showToast(`✓ 固定課已儲存${_cffStudents.length?`，已指派 ${_cffStudents.length} 位學員`:''}`);
+    _cffStudents=[];
     loadCoachFixedList();
-    // Also reload weekly schedule to reflect changes
     loadCoachSchedule();
   }catch(e){err.textContent='儲存失敗';console.error(e);}
 }
