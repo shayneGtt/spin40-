@@ -2333,9 +2333,11 @@ async function loadCoachSchedule(){
     });
 
     // Coach's personal fixed schedule for this day-of-week
+    const actualData=s.exists()?s.val():{};
     Object.entries(coachFixed).filter(([,e])=>e.dow===dow).forEach(([key,e])=>{
-      // Only show if not already overridden by a real schedule entry (match by classKey or time)
       const cfKey=`cf_${key}`;
+      // Skip if this date has a _del marker for this key
+      if(actualData[cfKey]?._del) return;
       const alreadyIn=allItems.some(x=>x.dateKey===k&&(x.classKey===cfKey||(x.time===e.time&&x.coach===CU.name)));
       if(!alreadyIn) allItems.push({...e,dateKey:k,classKey:cfKey,source:'personal',enrolled:0});
     });
@@ -3252,14 +3254,18 @@ async function loadCoachPlan(){
     const merged={...template,...(s.exists()?s.val():{})};
     allData[dk]={};
     Object.entries(merged).forEach(([k,c])=>{
+      if(c._del) return; // skip deleted fixed classes
       if(c.coach===CU.name&&c.name&&c.time&&c.time!=='彈性'){
         allData[dk][k]=c; timeSet.add(c.time);
       }
     });
     // personal fixed
     const dow=d.getDay();
+    const actualSnap=s.exists()?s.val():{};
     Object.entries(coachFixed).filter(([,e])=>e.dow===dow).forEach(([k,e])=>{
       const key=`cf_${k}`;
+      // Skip if this specific date has a _del marker for this key
+      if(actualSnap[key]?._del) return;
       if(!Object.values(allData[dk]).some(x=>x.time===e.time)){
         allData[dk][key]={...e,source:'personal'}; timeSet.add(e.time);
       }
@@ -3910,7 +3916,7 @@ async function loadAdminSchedDay(dateKey, label){
   let classData={};
   const s=await GET(fb(`schedule/${dateKey}`));
   const template=getFixedClassesForDate(dateKey)||{};
-  // fixed template as base, Firebase overrides (but don't show flex fixed classes in admin view)
+  // fixed template as base — only exclude true flex placeholders (time==='彈性'), not private/duo with ageGroup=flex
   const fixedFiltered=Object.fromEntries(Object.entries(template).filter(([,v])=>v.ageGroup!=='flex'));
   classData={...fixedFiltered,...(s.exists()?s.val():{})};
   // Filter out _del markers
@@ -4549,15 +4555,18 @@ async function loadCoachWeekSched(){
     // Filter to this coach
     let items=Object.entries(merged).filter(([,c])=>c.coach===CU.name);
 
-    // Add personal fixed if not already present
+    // Filter out single-day deletions first
+    items=items.filter(([,c])=>!c._del);
+
+    // Add personal fixed if not already present AND not deleted for this date
+    const actualData=s.exists()?s.val():{};
     Object.entries(coachFixed).filter(([,e])=>e.dow===dow).forEach(([key,e])=>{
       const cfKey=`cf_${key}`;
+      // Skip if _del marker exists for this date
+      if(actualData[cfKey]?._del) return;
       const dup=items.some(([k2,x])=>k2===cfKey||(x.time===e.time));
       if(!dup) items.push([cfKey,{...e,source:'personal',enrolled:0}]);
     });
-
-    // Filter out single-day deletions
-    items=items.filter(([,c])=>!c._del);
 
     items.sort(([,a],[,b])=>a.time.localeCompare(b.time));
     if(!items.length) continue;
@@ -4574,10 +4583,8 @@ async function loadCoachWeekSched(){
           const editBtn=isPersonal
             ?`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
                 onclick="openEditPersonalFixedDay('${key}','${dk}','${(c.name||'').replace(/'/g,'&#39;')}','${c.time}',${c.seats||1})">編輯</button>`
-            :!isFixed
-            ?`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
-                onclick="openEditClass('${dk}','${key}')">編輯</button>`
-            :'';
+            :`<button class="cancel-btn" style="background:var(--teal-l);color:var(--teal2);border-color:rgba(45,191,170,.3);font-size:11px;"
+                onclick="openEditClass('${dk}','${key}')">編輯</button>`;
           return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
             <div style="font-size:12px;font-weight:700;color:var(--gray);min-width:36px;">${c.time}</div>
             <div style="flex:1;">
